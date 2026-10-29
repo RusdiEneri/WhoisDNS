@@ -53,7 +53,7 @@ Note: `lighthouse_audit` with `mode: "navigation"` must run after navigating to 
 
 ## Quality gate (Anti-Slop)
 
-Skills: `antislop` (core) plus `antislop-ui`, `antislop-human`, `antislop-layoutmobile`, `antislop-copywriting`, `antislop-code` under `.opencode/skills/`.
+Skills: `antislop` (core) plus `antislop-ui`, `antislop-human`, `antislop-layoutmobile`, `antislop-copywriting`, `antislop-code`, installed globally under `~/.config/opencode/skills/` (Windows: `%USERPROFILE%\.config\opencode\skills\`).
 
 Apply them as a review gate on UI, copy, and code, not as a style rewrite. Concretely:
 
