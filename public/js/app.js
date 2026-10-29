@@ -577,10 +577,10 @@ function renderResults(data) {
   // Status badge
   if (whois.isAvailable) {
     elements.badgeStatus.textContent = 'Available / Unregistered';
-    elements.badgeStatus.className = 'badge accent-amber';
+    elements.badgeStatus.className = 'badge badge-status accent-amber';
   } else if (whois.daysUntilExpiry !== null && whois.daysUntilExpiry < 0) {
     elements.badgeStatus.textContent = 'Expired';
-    elements.badgeStatus.className = 'badge accent-red';
+    elements.badgeStatus.className = 'badge badge-status accent-red';
   } else {
     elements.badgeStatus.textContent = 'Active';
     elements.badgeStatus.className = 'badge badge-status';
@@ -630,7 +630,7 @@ function renderResults(data) {
   state.propagationData = null;
   elements.propPercentageText.textContent = 'Select record type and test propagation';
   elements.propProgressBar.style.width = '0%';
-  elements.resolversGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">Click "Refresh Propagation" or open tab to test 8 global Anycast resolvers.</div>';
+  elements.resolversGrid.innerHTML = '<p class="grid-empty">Click "Refresh Propagation" or open the tab to test 8 global Anycast resolvers.</p>';
 }
 
 function formatDate(dateStr) {
@@ -771,8 +771,7 @@ function renderGeoDetails(ipInfo, cnameChain) {
 
   if (chain.length > 0) {
     const chainDiv = document.createElement('div');
-    chainDiv.className = 'geo-item';
-    chainDiv.style.gridColumn = '1/-1';
+    chainDiv.className = 'geo-item geo-item-wide';
     chainDiv.innerHTML = `
       <div class="geo-label">CNAME Chain</div>
       <div class="geo-val font-mono" title="${escapeHtml(chain.join(' -> '))}">${escapeHtml(chain.join(' \u2192 '))}</div>
@@ -782,7 +781,7 @@ function renderGeoDetails(ipInfo, cnameChain) {
 
   if (!ipInfo || !ipInfo.ip) {
     if (chain.length === 0) {
-      elements.overviewGeoDetails.innerHTML = '<div class="geo-item text-muted" style="grid-column: 1/-1;">No IP information available</div>';
+      elements.overviewGeoDetails.innerHTML = '<div class="geo-item geo-item-wide text-muted">No IP information available</div>';
     }
     return;
   }
@@ -851,7 +850,7 @@ function renderDnsRecordsTable() {
 
   if (filtered.length === 0) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">No ${filterType === 'ALL' ? '' : filterType} records match query.</td>`;
+    tr.innerHTML = `<td colspan="4" class="table-empty">No ${filterType === 'ALL' ? '' : filterType} records match query.</td>`;
     elements.dnsTableBody.appendChild(tr);
     return;
   }
@@ -871,7 +870,7 @@ function renderDnsRecordsTable() {
         <span>${escapeHtml(rec.value)}</span>
         ${isIp ? `<button class="btn-ip-detail" data-ip="${escapeHtml(rec.value)}">IP Info</button>` : ''}
       </td>
-      <td style="text-align: right;">
+      <td class="cell-action">
         <button class="btn-table-action" data-copy="${escapeHtml(rec.value)}">Copy</button>
       </td>
     `;
@@ -1046,7 +1045,7 @@ function renderPropagationResults(data) {
 
 async function inspectIpAddress(ip) {
   elements.modalIpTitle.textContent = `IP Analysis: ${ip}`;
-  elements.modalIpContent.innerHTML = '<div style="text-align: center; padding: 2rem;"><span class="spinner"></span><p style="margin-top: 1rem; color: var(--text-muted);">Fetching reverse DNS &amp; Geolocation...</p></div>';
+  elements.modalIpContent.innerHTML = '<div class="modal-loading"><span class="spinner"></span><p>Fetching reverse DNS &amp; Geolocation&hellip;</p></div>';
   elements.ipModal.style.display = 'flex';
 
   try {
@@ -1151,7 +1150,7 @@ function showToast(message) {
   const toast = document.createElement('div');
   toast.className = 'toast';
   toast.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="20 6 9 17 4 12"></polyline>
     </svg>
     <span>${escapeHtml(message)}</span>
