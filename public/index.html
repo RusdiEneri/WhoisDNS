@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNS & Whois Web Tools — Deep Domain & DNS Inspector</title>
+  <meta name="description" content="Production-grade Web Tools for comprehensive Domain WHOIS lookup, deep DNS records analysis (A, AAAA, MX, TXT, NS, SOA, CAA, SRV), security audit (SPF, DMARC, DNSSEC), and real-time global DNS propagation.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300E5FF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20'/><path d='M2 12h20'/></svg>">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">Whois<span class="accent-cyan">DNS</span></span>
+          <span class="brand-badge">DevTools</span>
+        </div>
+      </div>
+
+      <div class="header-status">
+        <div class="status-indicator online" id="server-status">
+          <span class="pulse-dot"></span>
+          <span class="status-text" id="server-status-text">Engine Online</span>
+        </div>
+        <a href="#about-section" class="nav-link" id="btn-about">About</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-layout">
+    <!-- Hero / Search Section -->
+    <section class="search-section">
+      <div class="search-hero-content">
+        <h1 class="hero-title">Deep <span class="gradient-text">Domain &amp; DNS</span> Intelligence</h1>
+        <p class="hero-subtitle">Authoritative WHOIS registration data, full-spectrum DNS records, security compliance (SPF, DMARC, DNSSEC), and real-time global Anycast propagation.</p>
+      </div>
+
+      <div class="search-box-wrapper">
+        <form id="search-form" class="search-form" autocomplete="off">
+          <div class="input-group">
+            <div class="input-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </div>
+            <input 
+              type="text" 
+              id="domain-input" 
+              class="search-input" 
+              placeholder="Enter domain or IP (e.g., google.com, kompas.id, 1.1.1.1)" 
+              spellcheck="false" 
+              autocapitalize="none"
+              required
+            >
+            <button type="button" id="btn-clear-input" class="btn-clear" title="Clear input" aria-label="Clear input" style="display: none;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            <button type="submit" id="btn-search" class="btn-primary" aria-label="Inspect Domain">
+              <span class="btn-text">Inspect</span>
+              <svg class="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+              <span class="spinner" id="search-spinner" style="display: none;"></span>
+            </button>
+          </div>
+        </form>
+
+        <!-- Quick Examples & History -->
+        <div class="search-footer-chips">
+          <div class="chips-group">
+            <span class="chips-label">Examples:</span>
+            <button class="chip-item" data-domain="google.com">google.com</button>
+            <button class="chip-item" data-domain="github.com">github.com</button>
+            <button class="chip-item" data-domain="kompas.id">kompas.id</button>
+            <button class="chip-item" data-domain="cloudflare.com">cloudflare.com</button>
+            <button class="chip-item" data-domain="1.1.1.1">1.1.1.1</button>
+          </div>
+          <div class="history-chips-group" id="history-container" style="display: none;">
+            <span class="chips-label">Recent:</span>
+            <div id="history-items" class="history-items-row"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Loading State -->
+    <section id="loading-view" class="state-card loading-state" style="display: none;">
+      <div class="radar-scanner">
+        <div class="radar-circle"></div>
+        <div class="radar-beam"></div>
+      </div>
+      <h3 class="loading-heading">Performing Comprehensive Lookup...</h3>
+      <p class="loading-sub" id="loading-subtext">Connecting to authoritative WHOIS servers &amp; resolving 9 DNS record types</p>
+    </section>
+
+    <!-- Error State -->
+    <section id="error-view" class="state-card error-state" style="display: none;">
+      <div class="error-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <h3 class="error-heading" id="error-title">Lookup Failed</h3>
+      <p class="error-message" id="error-message">Unable to resolve domain.</p>
+      <button class="btn-secondary" id="btn-error-retry">Try Again</button>
+    </section>
+
+    <!-- Results Container -->
+    <div id="results-view" class="results-container" style="display: none;">
+      <!-- Domain Overview Banner Card -->
+      <section class="domain-overview-card">
+        <div class="overview-header">
+          <div class="overview-title-block">
+            <div class="domain-name-row">
+              <h2 class="target-domain" id="target-domain-name">example.com</h2>
+              <span class="badge badge-tld" id="badge-tld">.COM</span>
+              <span class="badge badge-status" id="badge-status">Active</span>
+              <span class="badge badge-dnssec" id="badge-dnssec">DNSSEC</span>
+            </div>
+            <div class="domain-sub-meta" id="domain-sub-meta">
+              <span id="meta-ip">IP: -</span>
+              <span class="bullet">&bull;</span>
+              <span id="meta-geo">Location: -</span>
+              <span class="bullet">&bull;</span>
+              <span id="meta-asn">ASN: -</span>
+            </div>
+          </div>
+
+          <div class="overview-actions">
+            <button class="btn-action" id="btn-copy-summary" title="Copy Summary to Clipboard">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copy</span>
+            </button>
+            <button class="btn-action" id="btn-export-json" title="Download JSON Data">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Export</span>
+            </button>
+            <button class="btn-action" id="btn-share" title="Share Link">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+              <span>Share</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Key Metrics Bar (WattVision/PowerBI Style from DESIGN.md) -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">Registrar</span>
+            <div class="metric-value font-mono" id="kpi-registrar">-</div>
+            <span class="metric-footnote" id="kpi-iana-id">IANA ID: -</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Domain Age</span>
+            <div class="metric-value font-mono accent-cyan" id="kpi-age">-</div>
+            <span class="metric-footnote" id="kpi-created">Registered: -</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Expiration</span>
+            <div class="metric-value font-mono" id="kpi-expiry">-</div>
+            <span class="metric-footnote" id="kpi-days-left">Days remaining: -</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">DNS Records Found</span>
+            <div class="metric-value font-mono accent-green" id="kpi-dns-count">0</div>
+            <span class="metric-footnote" id="kpi-latency">Lookup time: 0ms</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Navigation Tabs -->
+      <nav class="results-tab-bar" aria-label="Tool Views">
+        <button class="tab-btn active" data-tab="tab-overview">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Overview</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-dns">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          <span>DNS Records</span>
+          <span class="tab-badge" id="dns-badge-count">0</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-whois">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>WHOIS Details</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-propagation">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span>Global Propagation</span>
+          <span class="tab-badge pulse" id="prop-badge">8 Nodes</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-raw">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <span>Raw WHOIS</span>
+        </button>
+      </nav>
+
+      <!-- TAB 1: OVERVIEW -->
+      <div id="tab-overview" class="tab-pane active">
+        <div class="overview-grid">
+          <!-- DNS & Security Health Audit -->
+          <div class="card health-card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <h3>DNS &amp; Security Health Audit</h3>
+              </div>
+              <span class="health-score-badge" id="health-score-badge">0 / 8 Passed</span>
+            </div>
+            <div class="card-body">
+              <div class="health-checklist" id="health-checklist">
+                <!-- Dynamically rendered checklist items -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Nameservers & Authority -->
+          <div class="card nameservers-card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                  <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                  <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                  <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                </svg>
+                <h3>Authoritative Nameservers</h3>
+              </div>
+              <button class="btn-ghost" id="btn-copy-ns" title="Copy all nameservers">Copy NS</button>
+            </div>
+            <div class="card-body">
+              <ul class="ns-list font-mono" id="overview-ns-list">
+                <!-- NS items -->
+              </ul>
+            </div>
+          </div>
+
+          <!-- Quick Mail & IP Infrastructure -->
+          <div class="card mail-infra-card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                <h3>Mail Exchange (MX) &amp; Routing</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="mx-quick-list font-mono" id="overview-mx-list">
+                <!-- MX items -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Server & Geolocation Card -->
+          <div class="card geo-server-card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                  <line x1="8" y1="2" x2="8" y2="18"></line>
+                  <line x1="16" y1="6" x2="16" y2="22"></line>
+                </svg>
+                <h3>Host &amp; Infrastructure Location</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="geo-details-table" id="overview-geo-details">
+                <!-- Geo details -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: DNS RECORDS (DEEP DIVE) -->
+      <div id="tab-dns" class="tab-pane">
+        <div class="card dns-card">
+          <div class="dns-filter-toolbar">
+            <div class="dns-pill-filters" id="dns-type-pills">
+              <button class="pill-filter active" data-type="ALL">ALL</button>
+              <button class="pill-filter" data-type="A">A</button>
+              <button class="pill-filter" data-type="AAAA">AAAA</button>
+              <button class="pill-filter" data-type="CNAME">CNAME</button>
+              <button class="pill-filter" data-type="MX">MX</button>
+              <button class="pill-filter" data-type="TXT">TXT</button>
+              <button class="pill-filter" data-type="NS">NS</button>
+              <button class="pill-filter" data-type="SOA">SOA</button>
+              <button class="pill-filter" data-type="CAA">CAA</button>
+              <button class="pill-filter" data-type="SRV">SRV</button>
+            </div>
+
+            <div class="dns-search-filter">
+              <input type="text" id="dns-record-search" placeholder="Filter records..." class="sub-filter-input font-mono">
+              <button class="btn-ghost" id="btn-copy-dns-records">Copy Visible</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="dns-table">
+              <thead>
+                <tr>
+                  <th style="width: 90px;">Type</th>
+                  <th style="width: 80px;">TTL</th>
+                  <th>Record Data / Target</th>
+                  <th style="width: 120px; text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="dns-table-body" class="font-mono">
+                <!-- Records populated here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: WHOIS DETAILS -->
+      <div id="tab-whois" class="tab-pane">
+        <div class="whois-grid">
+          <!-- Registrar Info -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="8.5" cy="7" r="4"></circle>
+                  <line x1="20" y1="8" x2="20" y2="14"></line>
+                  <line x1="23" y1="11" x2="17" y2="11"></line>
+                </svg>
+                <h3>Registrar Information</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <dl class="kv-list" id="whois-registrar-kv"></dl>
+            </div>
+          </div>
+
+          <!-- Registration Dates -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <h3>Important Dates &amp; Life Cycle</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <dl class="kv-list" id="whois-dates-kv"></dl>
+            </div>
+          </div>
+
+          <!-- Registrant Details -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <h3>Registrant Contact</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <dl class="kv-list" id="whois-registrant-kv"></dl>
+            </div>
+          </div>
+
+          <!-- Domain Status Codes & ICANN Definitions -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <h3>Domain Status &amp; EPP Flags</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="whois-status-badges" class="status-tags-container"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: GLOBAL PROPAGATION -->
+      <div id="tab-propagation" class="tab-pane">
+        <div class="card propagation-card">
+          <div class="propagation-header">
+            <div>
+              <h3>Global Anycast Resolver Propagation</h3>
+              <p class="section-desc">Real-time resolution test against 8 premier worldwide Anycast DNS networks.</p>
+            </div>
+            <div class="prop-controls">
+              <select id="prop-type-select" class="prop-select font-mono" aria-label="Propagation Record Type">
+                <option value="A">Type A (IPv4)</option>
+                <option value="AAAA">Type AAAA (IPv6)</option>
+                <option value="MX">Type MX (Mail)</option>
+                <option value="TXT">Type TXT</option>
+                <option value="NS">Type NS</option>
+                <option value="CNAME">Type CNAME</option>
+              </select>
+              <button class="btn-secondary" id="btn-refresh-propagation">Refresh Propagation</button>
+            </div>
+          </div>
+
+          <!-- Propagation Progress Bar -->
+          <div class="prop-progress-wrapper">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="prop-progress-bar" style="width: 0%;"></div>
+            </div>
+            <div class="progress-text-row">
+              <span id="prop-percentage-text">Checking propagation...</span>
+              <span id="prop-status-label" class="badge">In Progress</span>
+            </div>
+          </div>
+
+          <!-- Resolvers Grid -->
+          <div class="resolvers-grid" id="resolvers-grid">
+            <!-- Resolver Cards Populated Here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: RAW WHOIS -->
+      <div id="tab-raw" class="tab-pane">
+        <div class="card raw-card">
+          <div class="raw-card-toolbar">
+            <div class="raw-title">
+              <span class="terminal-dots">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+              </span>
+              <span class="font-mono text-sm">Authoritative Port 43 Socket Stream</span>
+            </div>
+            <div class="raw-actions">
+              <label class="toggle-wrap">
+                <input type="checkbox" id="raw-wrap-toggle" checked>
+                <span>Word Wrap</span>
+              </label>
+              <button class="btn-ghost" id="btn-copy-raw">Copy Raw Text</button>
+            </div>
+          </div>
+          <pre class="raw-pre font-mono" id="raw-whois-text"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- IP Detail Modal -->
+    <div id="ip-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            <h3 id="modal-ip-title">IP Address Details</h3>
+          </div>
+          <button class="btn-close-modal" id="btn-close-ip-modal" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body" id="modal-ip-content">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- About Section -->
+    <section id="about-section" class="about-section card">
+      <div class="about-grid">
+        <div>
+          <h3 class="about-title">About WhoisDNS DevTools</h3>
+          <p class="about-p">A high-performance network engineering tool built for system administrators, security auditors, and DevOps engineers. Performs direct TCP port 43 WHOIS queries across all global TLDs (including .com, .org, .net, .id, and ccTLDs), resolves all 9 standard DNS record types with TTL, audits email security (SPF &amp; DMARC), and benchmarks Anycast propagation latency.</p>
+        </div>
+        <div class="features-list">
+          <div class="feat-item">
+            <span class="feat-dot"></span>
+            <div><strong>Zero Slop / True WHOIS:</strong> Connects to authoritative registry port 43 servers with automatic IANA TLD referral discovery.</div>
+          </div>
+          <div class="feat-item">
+            <span class="feat-dot"></span>
+            <div><strong>Dual Engine:</strong> Runs with native Node.js socket engine, with seamless client-side DoH fallback.</div>
+          </div>
+          <div class="feat-item">
+            <span class="feat-dot"></span>
+            <div><strong>Email &amp; Security Audits:</strong> Instant automated evaluation of SPF, DMARC, DNSSEC, and CAA rules.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p>&copy; 2026 WhoisDNS Web Tools &bull; High Contrast Dark Mode Engine &bull; Compliant with ICANN EPP &amp; RFC 1035</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

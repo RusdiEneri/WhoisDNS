@@ -1,0 +1,25 @@
+{
+  "name": "dns-whois-tools",
+  "version": "1.0.0",
+  "description": "Modern Web Tools for comprehensive Domain WHOIS & Deep DNS Records Lookup",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "dns",
+    "whois",
+    "lookup",
+    "dns-records",
+    "network-tools",
+    "doh",
+    "propagation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
