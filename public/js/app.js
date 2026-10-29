@@ -629,8 +629,11 @@ function renderDnsRecordsTable() {
     const isIp = isIpv4(rec.value);
 
     tr.innerHTML = `
-      <td><span class="record-badge type-${rec.type}">${rec.type}</span></td>
-      <td><span class="record-ttl">${rec.ttl}s</span></td>
+      <td>
+        <span class="record-badge type-${rec.type}">${rec.type}</span>
+        <span class="record-ttl-mobile">${rec.ttl !== '-' ? rec.ttl + 's' : ''}</span>
+      </td>
+      <td><span class="record-ttl">${rec.ttl !== '-' ? rec.ttl + 's' : '-'}</span></td>
       <td class="record-value-cell">
         <span>${escapeHtml(rec.value)}</span>
         ${isIp ? `<button class="btn-ip-detail" data-ip="${escapeHtml(rec.value)}">IP Info</button>` : ''}
