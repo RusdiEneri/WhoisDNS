@@ -119,7 +119,10 @@ const elements = {
   btnCloseIpModal: document.getElementById('btn-close-ip-modal'),
 
   // Toast
-  toastContainer: document.getElementById('toast-container')
+  toastContainer: document.getElementById('toast-container'),
+
+  // Form validation
+  domainError: document.getElementById('domain-error')
 };
 
 // ==========================================================================
@@ -131,6 +134,14 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSearchHistory();
   checkServerHealth();
 
+  if (window.WhoisDnsTrack) {
+    window.WhoisDnsTrack.installClickTracking(document);
+    window.WhoisDnsTrack.track('page_view', {
+      referrer: document.referrer || 'direct',
+      hasQuery: new URLSearchParams(window.location.search).has('q')
+    });
+  }
+
   // Handle URL query parameter ?q= or ?domain=
   const urlParams = new URLSearchParams(window.location.search);
   const initialQuery = urlParams.get('q') || urlParams.get('domain');
@@ -140,14 +151,49 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+/**
+ * Non-blocking analytics helper: never breaks the UI if tracking is unavailable.
+ */
+function trackEvent(name, params) {
+  try {
+    if (window.WhoisDnsTrack) window.WhoisDnsTrack.track(name, params);
+  } catch (_) {}
+}
+
 function setupEventListeners() {
+  // Anti-spam: stamp the first interaction with the form, not page load, so
+  // that direct ?q= links and chip clicks are never mistaken for bots.
+  const formTsInput = document.getElementById('form-ts');
+  const stampFormInteraction = () => {
+    if (formTsInput && !formTsInput.value) formTsInput.value = String(Date.now());
+  };
+
   // Search form submit
   elements.searchForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const query = elements.domainInput.value.trim();
-    if (query) executeLookup(query);
+
+    const validation = validateDomainInput(query);
+    if (!validation.valid) {
+      showFormError(validation.message);
+      trackEvent('form_invalid', { reason: validation.reason });
+      return;
+    }
+
+    clearFormError();
+    trackEvent('form_submit', { input_type: validation.type });
+    executeLookup(query);
   });
 
+  elements.domainInput.addEventListener('keydown', stampFormInteraction, { once: true });
+  elements.domainInput.addEventListener('input', stampFormInteraction, { once: true });
+
+  // Clear inline error as soon as the user edits the field
+  elements.domainInput.addEventListener('input', () => {
+    if (elements.domainError && elements.domainError.style.display !== 'none') {
+      clearFormError();
+    }
+  });
   // Clear button toggle
   elements.domainInput.addEventListener('input', () => {
     elements.btnClearInput.style.display = elements.domainInput.value ? 'flex' : 'none';
@@ -165,6 +211,7 @@ function setupEventListeners() {
       const domain = chip.getAttribute('data-domain');
       elements.domainInput.value = domain;
       elements.btnClearInput.style.display = 'flex';
+      trackEvent('cta_click', { cta: 'example_chip', label: domain });
       executeLookup(domain);
     });
   });
@@ -193,9 +240,18 @@ function setupEventListeners() {
   });
 
   // Action Buttons
-  elements.btnCopySummary.addEventListener('click', copySummaryToClipboard);
-  elements.btnExportJson.addEventListener('click', exportDataAsJson);
-  elements.btnShare.addEventListener('click', shareLookupLink);
+  elements.btnCopySummary.addEventListener('click', () => {
+    trackEvent('cta_click', { cta: 'copy_summary' });
+    copySummaryToClipboard();
+  });
+  elements.btnExportJson.addEventListener('click', () => {
+    trackEvent('cta_click', { cta: 'export_json' });
+    exportDataAsJson();
+  });
+  elements.btnShare.addEventListener('click', () => {
+    trackEvent('cta_click', { cta: 'share_link' });
+    shareLookupLink();
+  });
   elements.btnCopyNs.addEventListener('click', copyNameservers);
   elements.btnCopyDnsRecords.addEventListener('click', copyVisibleDnsRecords);
   elements.btnCopyRaw.addEventListener('click', copyRawWhois);
@@ -208,6 +264,7 @@ function setupEventListeners() {
     if (state.currentDomain) runPropagationCheck(state.currentDomain, elements.propTypeSelect.value);
   });
   elements.btnRefreshPropagation.addEventListener('click', () => {
+    trackEvent('cta_click', { cta: 'refresh_propagation' });
     if (state.currentDomain) runPropagationCheck(state.currentDomain, elements.propTypeSelect.value);
   });
 
@@ -296,6 +353,54 @@ function isPlausibleDomain(str) {
   return /^(?=.{1,253}$)([a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?\.)+[a-z]{2,63}$/.test(str);
 }
 
+/**
+ * Client-side form validation with a human-readable reason.
+ */
+function validateDomainInput(raw) {
+  if (!raw) {
+    return { valid: false, reason: 'empty', message: 'Please enter a domain name or IP address.' };
+  }
+
+  const cleaned = sanitizeDomain(raw);
+
+  if (!cleaned) {
+    return { valid: false, reason: 'empty_after_clean', message: 'Please enter a valid domain name.' };
+  }
+
+  if (isIpv4(cleaned) || /^[0-9a-f:]+$/i.test(cleaned) && cleaned.includes(':')) {
+    return { valid: true, type: 'ip' };
+  }
+
+  if (cleaned.length > 253) {
+    return { valid: false, reason: 'too_long', message: 'Domain name is too long (maximum 253 characters).' };
+  }
+
+  if (!isPlausibleDomain(cleaned)) {
+    return {
+      valid: false,
+      reason: 'bad_format',
+      message: 'Enter a valid domain like example.com (must include a TLD such as .com or .id).'
+    };
+  }
+
+  return { valid: true, type: 'domain' };
+}
+
+function showFormError(message) {
+  if (!elements.domainError) return;
+  elements.domainError.textContent = message;
+  elements.domainError.style.display = 'block';
+  elements.domainInput.setAttribute('aria-invalid', 'true');
+  elements.domainInput.focus();
+}
+
+function clearFormError() {
+  if (!elements.domainError) return;
+  elements.domainError.textContent = '';
+  elements.domainError.style.display = 'none';
+  elements.domainInput.removeAttribute('aria-invalid');
+}
+
 // ==========================================================================
 // Main Lookup Execution
 // ==========================================================================
@@ -329,7 +434,7 @@ async function executeLookup(query) {
   elements.loadingSubtext.textContent = `Connecting to WHOIS servers and analyzing DNS records for ${domain}...`;
 
   try {
-    const res = await fetch(`/api/lookup?domain=${encodeURIComponent(domain)}`);
+    const res = await fetch(`/api/lookup?${buildLookupParams(domain)}`);
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
       throw new Error(errJson.message || `Server returned error (${res.status})`);
@@ -338,6 +443,12 @@ async function executeLookup(query) {
     const data = await res.json();
     state.lookupData = data;
 
+    trackEvent('lookup_success', {
+      query_type: data.type === 'ip' ? 'ip' : 'domain',
+      total_records: data.dns ? data.dns.totalRecords : 0,
+      duration_ms: data.durationMs || 0
+    });
+
     // Render results
     renderResults(data);
 
@@ -345,6 +456,7 @@ async function executeLookup(query) {
     elements.resultsView.style.display = 'block';
   } catch (err) {
     console.warn('Backend lookup failed, attempting browser direct DoH fallback...', err);
+    trackEvent('lookup_backend_failed', { reason: String(err.message || '').slice(0, 120) });
     try {
       const fallbackData = await runClientFallback(domain);
       state.lookupData = fallbackData;
@@ -352,16 +464,36 @@ async function executeLookup(query) {
       elements.loadingView.style.display = 'none';
       elements.resultsView.style.display = 'block';
       showToast('Resolved via Cloudflare & Google DoH');
+      trackEvent('lookup_success', { query_type: 'domain', fallback: true });
     } catch (fallbackErr) {
       elements.loadingView.style.display = 'none';
       elements.errorView.style.display = 'block';
       elements.errorTitle.textContent = 'Lookup Failed';
       elements.errorMessage.textContent = err.message || 'Unable to connect to domain or resolver.';
+      trackEvent('lookup_failed', { reason: String(err.message || '').slice(0, 120) });
     }
   } finally {
     elements.searchSpinner.style.display = 'none';
     elements.btnSearch.removeAttribute('disabled');
   }
+}
+
+/**
+ * Build the lookup query string, including anti-spam honeypot and timing
+ * fields. Hidden fields are always empty for humans.
+ */
+function buildLookupParams(domain) {
+  const params = new URLSearchParams({ domain });
+
+  const hpWebsite = document.getElementById('hp-website');
+  const hpCompany = document.getElementById('hp-company');
+  const formTs = document.getElementById('form-ts');
+
+  if (hpWebsite && hpWebsite.value) params.set('website', hpWebsite.value);
+  if (hpCompany && hpCompany.value) params.set('company_url', hpCompany.value);
+  if (formTs && formTs.value) params.set('form_ts', formTs.value);
+
+  return params.toString();
 }
 
 // Client-side DoH Fallback if backend API is offline

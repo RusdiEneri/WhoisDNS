@@ -3,13 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DNS & Whois Web Tools — Deep Domain & DNS Inspector</title>
-  <meta name="description" content="Production-grade Web Tools for comprehensive Domain WHOIS lookup, deep DNS records analysis (A, AAAA, MX, TXT, NS, SOA, CAA, SRV), security audit (SPF, DMARC, DNSSEC), and real-time global DNS propagation.">
+  <title>WhoisDNS Web Tools — Deep Domain WHOIS &amp; DNS Records Inspector</title>
+  <meta name="description" content="Free online tool for comprehensive Domain WHOIS lookup, deep DNS records analysis (A, AAAA, MX, TXT, NS, SOA, CAA, SRV, HTTPS, DNSKEY), email security audit (SPF, DMARC, DKIM, DNSSEC), and real-time global DNS propagation checks.">
+  <meta name="keywords" content="whois lookup, dns lookup, dns records checker, mx record lookup, txt record, spf check, dmarc check, dnssec, dns propagation, domain age">
+  <meta name="author" content="WhoisDNS Web Tools">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="theme-color" content="#05070D">
+  <link rel="canonical" href="{{SITE_URL}}/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WhoisDNS Web Tools">
+  <meta property="og:title" content="WhoisDNS Web Tools — Deep Domain WHOIS &amp; DNS Inspector">
+  <meta property="og:description" content="Comprehensive Domain WHOIS lookup, deep DNS records analysis, security audit (SPF, DMARC, DNSSEC), and real-time global DNS propagation checker.">
+  <meta property="og:url" content="{{SITE_URL}}/">
+  <meta property="og:image" content="{{SITE_URL}}/og-image.svg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="WhoisDNS Web Tools — Domain WHOIS and DNS Records Inspector">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="WhoisDNS Web Tools — Deep Domain WHOIS &amp; DNS Inspector">
+  <meta name="twitter:description" content="WHOIS, 15 DNS record types, SPF/DMARC/DKIM audit, DNSSEC, and global propagation — all in one free tool.">
+  <meta name="twitter:image" content="{{SITE_URL}}/og-image.svg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300E5FF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20'/><path d='M2 12h20'/></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- Structured Data: Organization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "WhoisDNS Web Tools",
+    "url": "{{SITE_URL}}/",
+    "logo": "{{SITE_URL}}/favicon.svg",
+    "sameAs": ["https://github.com/RusdiEneri/WhoisDNS"],
+    "description": "Free domain WHOIS and deep DNS record inspection toolkit."
+  }
+  </script>
+
+  <!-- Structured Data: WebApplication + BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "@id": "{{SITE_URL}}/#app",
+        "name": "WhoisDNS Web Tools",
+        "url": "{{SITE_URL}}/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "description": "Domain WHOIS lookup, 15 DNS record types, SPF/DMARC/DKIM/DNSSEC audit, and global DNS propagation checks.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": [
+          "WHOIS registrable domain lookup with RDAP fallback",
+          "15 DNS record types with TTL",
+          "SPF, DMARC, DKIM and DNSSEC security audit",
+          "Global anycast DNS propagation across 8 resolvers",
+          "IPv4 and IPv6 geolocation and reverse DNS"
+        ],
+        "publisher": { "@id": "{{SITE_URL}}/#org" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "{{SITE_URL}}/#org",
+        "name": "WhoisDNS Web Tools",
+        "url": "{{SITE_URL}}/",
+        "logo": "{{SITE_URL}}/favicon.svg"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "{{SITE_URL}}/" },
+          { "@type": "ListItem", "position": 2, "name": "Domain Inspector" }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body class="dark-theme">
   <!-- Top Navigation Bar -->
@@ -49,7 +132,15 @@
       </div>
 
       <div class="search-box-wrapper">
-        <form id="search-form" class="search-form" autocomplete="off">
+        <form id="search-form" class="search-form" autocomplete="off" novalidate>
+          <!-- Honeypot fields: hidden from humans and assistive tech, bots fill them anyway -->
+          <div class="hp-field" aria-hidden="true">
+            <label for="hp-website">Website</label>
+            <input type="text" id="hp-website" name="website" tabindex="-1" autocomplete="off">
+            <label for="hp-company">Company URL</label>
+            <input type="text" id="hp-company" name="company_url" tabindex="-1" autocomplete="off">
+          </div>
+          <input type="hidden" id="form-ts" name="form_ts" value="">
           <div class="input-group">
             <div class="input-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -64,6 +155,8 @@
               placeholder="Enter domain or IP (e.g., google.com, kompas.id, 1.1.1.1)" 
               spellcheck="false" 
               autocapitalize="none"
+              aria-label="Domain or IP address"
+              aria-describedby="domain-error"
               required
             >
             <button type="button" id="btn-clear-input" class="btn-clear" title="Clear input" aria-label="Clear input" style="display: none;">
@@ -81,6 +174,7 @@
               <span class="spinner" id="search-spinner" style="display: none;"></span>
             </button>
           </div>
+          <p class="form-error" id="domain-error" role="alert" aria-live="polite" style="display: none;"></p>
         </form>
 
         <!-- Quick Examples & History -->
@@ -545,10 +639,16 @@
 
     <!-- About Section -->
     <section id="about-section" class="about-section card">
+      <nav aria-label="Breadcrumb" class="breadcrumbs">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li aria-current="page">Domain Inspector</li>
+        </ol>
+      </nav>
       <div class="about-grid">
         <div>
           <h3 class="about-title">About WhoisDNS DevTools</h3>
-          <p class="about-p">A high-performance network engineering tool built for system administrators, security auditors, and DevOps engineers. Performs direct TCP port 43 WHOIS queries across all global TLDs (including .com, .org, .net, .id, and ccTLDs), resolves all 9 standard DNS record types with TTL, audits email security (SPF &amp; DMARC), and benchmarks Anycast propagation latency.</p>
+          <p class="about-p">A high-performance network engineering tool built for system administrators, security auditors, and DevOps engineers. Performs direct TCP port 43 WHOIS queries across all global TLDs (including .com, .org, .net, .id, and ccTLDs), resolves 15 DNS record types with TTL, audits email security (SPF, DMARC, DKIM, DNSSEC), and benchmarks Anycast propagation latency across 8 global resolvers.</p>
         </div>
         <div class="features-list">
           <div class="feat-item">
@@ -561,7 +661,7 @@
           </div>
           <div class="feat-item">
             <span class="feat-dot"></span>
-            <div><strong>Email &amp; Security Audits:</strong> Instant automated evaluation of SPF, DMARC, DNSSEC, and CAA rules.</div>
+            <div><strong>Email &amp; Security Audits:</strong> Instant automated evaluation of SPF, DMARC, DKIM, DNSSEC, and CAA rules.</div>
           </div>
         </div>
       </div>
@@ -573,10 +673,38 @@
 
   <footer class="app-footer">
     <div class="footer-container">
-      <p>&copy; 2026 WhoisDNS Web Tools &bull; High Contrast Dark Mode Engine &bull; Compliant with ICANN EPP &amp; RFC 1035</p>
+      <nav class="footer-nav" aria-label="Footer navigation">
+        <div class="footer-col">
+          <h4>Tools</h4>
+          <ul>
+            <li><a href="/?q=example.com">WHOIS Lookup</a></li>
+            <li><a href="/?q=example.com">DNS Records</a></li>
+            <li><a href="/#tab-propagation-anchor">DNS Propagation</a></li>
+            <li><a href="/?q=1.1.1.1">IP Geolocation</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="/#about-section">About</a></li>
+            <li><a href="/api/health">API Status</a></li>
+            <li><a href="https://github.com/RusdiEneri/WhoisDNS" target="_blank" rel="noopener">Source Code</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Popular Checks</h4>
+          <ul>
+            <li><a href="/?q=google.com">google.com</a></li>
+            <li><a href="/?q=github.com">github.com</a></li>
+            <li><a href="/?q=cloudflare.com">cloudflare.com</a></li>
+          </ul>
+        </div>
+      </nav>
+      <p class="footer-copy">&copy; 2026 WhoisDNS Web Tools &bull; High Contrast Dark Mode Engine &bull; Compliant with ICANN EPP &amp; RFC 1035</p>
     </div>
   </footer>
 
-  <script src="js/app.js"></script>
+  <script src="/js/track.js"></script>
+  <script src="/js/app.js"></script>
 </body>
 </html>

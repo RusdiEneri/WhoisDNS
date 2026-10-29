@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#05070D"/>
+      <stop offset="55%" stop-color="#0A1220"/>
+      <stop offset="100%" stop-color="#071A22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1050" cy="90" r="220" fill="#00E5FF" opacity="0.07"/>
+  <circle cx="120" cy="580" r="180" fill="#A855F7" opacity="0.07"/>
+
+  <g transform="translate(96 128)" fill="none" stroke="#00E5FF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="42" cy="42" r="40"/>
+    <path d="M42 2a55 55 0 0 0 0 80 55 55 0 0 0 0-80"/>
+    <path d="M2 42h80"/>
+  </g>
+
+  <text x="196" y="188" font-family="Inter, Helvetica, Arial, sans-serif" font-size="58" font-weight="700" fill="#F8FAFC">Whois<tspan fill="#00E5FF">DNS</tspan></text>
+
+  <text x="96" y="330" font-family="Inter, Helvetica, Arial, sans-serif" font-size="66" font-weight="700" fill="#F8FAFC">Deep Domain &amp; DNS</text>
+  <text x="96" y="410" font-family="Inter, Helvetica, Arial, sans-serif" font-size="66" font-weight="700" fill="url(#accent)">Intelligence</text>
+
+  <text x="96" y="478" font-family="Inter, Helvetica, Arial, sans-serif" font-size="27" fill="#94A3B8">WHOIS registration · 15 DNS record types · SPF/DMARC/DKIM audit · DNSSEC · global propagation</text>
+
+  <g font-family="JetBrains Mono, Consolas, monospace" font-size="21" fill="#00E5FF">
+    <rect x="96" y="520" width="176" height="46" rx="10" fill="#00E5FF" opacity="0.12"/>
+    <text x="120" y="550">A · AAAA · MX</text>
+    <rect x="292" y="520" width="176" height="46" rx="10" fill="#A855F7" opacity="0.14"/>
+    <text x="316" y="550">TXT · NS · SOA</text>
+    <rect x="488" y="520" width="230" height="46" rx="10" fill="#32D74B" opacity="0.12"/>
+    <text x="512" y="550">HTTPS · DNSKEY</text>
+  </g>
+</svg>

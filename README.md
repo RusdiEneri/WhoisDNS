@@ -144,6 +144,61 @@ DNS/
 
 ---
 
+## SEO & Discoverability
+
+Semua elemen SEO sudah terpasang di kode:
+
+| Item | Status | Lokasi |
+|---|---|---|
+| `robots.txt` | Dinamis dari `SITE_URL` | `GET /robots.txt` |
+| `sitemap.xml` | Dinamis + `lastmod` | `GET /sitemap.xml` |
+| Canonical URL | Ada | `public/index.html` |
+| Meta robots | `index, follow, max-image-preview:large` | `public/index.html` |
+| Open Graph + Twitter Card | Ada + `og-image.svg` | `public/index.html` |
+| Organization schema | JSON-LD | `public/index.html` |
+| WebApplication schema | JSON-LD | `public/index.html` |
+| BreadcrumbList schema + UI | JSON-LD + `<nav aria-label="Breadcrumb">` | `public/index.html` |
+| Internal links | Footer 3 kolom + breadcrumb | `public/index.html` |
+| Favicon | `favicon.svg` (+ `favicon.ico` redirect) | `public/favicon.svg` |
+| PWA manifest | Ada | `public/site.webmanifest` |
+| Custom 404 | Halaman HTML + `noindex` | `public/404.html` |
+
+### Setelah deploy, lakukan ini sekali secara manual
+
+Search Console, submit sitemap, dan cek indexing **tidak bisa** diotomasi dari kode karena butuh akses akun Google-mu. Langkahnya:
+
+1. **Set `SITE_URL`** di environment variable platform (mis. `SITE_URL=https://domainmu.com`) supaya canonical, robots, dan sitemap memakai host yang benar.
+2. Buka [Google Search Console](https://search.google.com/search-console) &rarr; **Add property** &rarr; pilih **URL prefix** &rarr; masukkan `https://domainmu.com`.
+3. Verifikasi kepemilikan. Cara termudah: **HTML tag** — tambahkan meta verification ke `<head>` `public/index.html`, lalu deploy ulang.
+4. Buka **Sitemaps** &rarr; submit `sitemap.xml` &rarr; pastikan status *Success*.
+5. Buka **URL Inspection** &rarr; tempel `https://domainmu.com/` &rarr; klik **Request indexing**.
+6. Cek indexing berkala di **Pages** &rarr; lihat apakah statusnya *Indexed* (bisa butuh 1-7 hari).
+7. Opsional: submit juga ke [Bing Webmaster Tools](https://www.bing.com/webmasters) (bisa impor langsung dari Search Console).
+
+Verifikasi teknis lokal tanpa akun:
+```bash
+curl -s localhost:3000/robots.txt
+curl -s localhost:3000/sitemap.xml
+# validasi JSON-LD
+curl -s localhost:3000/ | grep -A3 'application/ld+json'
+```
+
+---
+
+## Kualitas, Backup & Device Testing
+
+```bash
+npm test          # 50 test: unit, API, SEO, anti-spam
+npm run lint      # syntax check semua modul
+npm run backup    # snapshot ke backups/<timestamp>/ + manifest SHA-256
+```
+
+- **CI:** `.github/workflows/ci.yml` menjalankan lint + test otomatis di Node 18/20/22 untuk setiap push dan pull request (quality gate).
+- **Backup:** `scripts/backup.js` menyalin seluruh source (tanpa `node_modules`/`.git`) beserta checksum SHA-256, menyimpan 5 snapshot terakhir. Jalankan sebelum perubahan berisiko.
+- **Test all device:** layout responsif sudah memakai breakpoint 720px/480px, tetapi pengujian perangkat nyata tetap manual — buka DevTools &rarr; Toggle device toolbar, uji minimal lebar 320px, 375px, 768px, 1024px, 1440px.
+
+---
+
 ## Catatan Deployment
 
 - **Node/VPS/Docker (disarankan):** semua fitur aktif, termasuk WHOIS socket port 43.

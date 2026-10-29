@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
 const helmet = require('helmet');
+const fs = require('fs');
 const path = require('path');
 const { analyzeInput } = require('./lib/domain');
 const { lookupWhois, whoisCache } = require('./lib/whois');
@@ -9,6 +10,7 @@ const { lookupAllDns, resolveRecordType, resolveChain, RECORD_TYPES, dnsCache } 
 const { checkPropagation, SUPPORTED_TYPES: PROPAGATION_TYPES } = require('./lib/propagation');
 const { lookupIpInfo, ipCache } = require('./lib/ip');
 const { rateLimit } = require('./lib/ratelimit');
+const { antiSpam } = require('./lib/antispam');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +43,12 @@ app.use(express.json({ limit: '16kb' }));
 const apiLimiter = rateLimit({ windowMs: 60_000, max: 120 });
 
 app.use('/api', apiLimiter);
+
+// Canonicalize the raw template file to the clean root URL before static serving.
+app.get('/index.html', (req, res) => {
+  res.redirect(301, '/');
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: IS_SERVERLESS ? '1h' : '7d',
   etag: true,
@@ -84,7 +92,7 @@ app.get('/api/health', (req, res) => {
 /**
  * Unified lookup: WHOIS + all DNS records + email auth + GeoIP.
  */
-app.get('/api/lookup', async (req, res, next) => {
+app.get('/api/lookup', antiSpam(), async (req, res, next) => {
   const target = requireTarget(req, res);
   if (!target) return;
 
@@ -219,6 +227,61 @@ app.get('/api/ip', async (req, res, next) => {
 });
 
 /**
+ * SEO: robots.txt and sitemap.xml are generated from SITE_URL so the
+ * canonical host never has to be hardcoded twice.
+ */
+function siteOrigin(req) {
+  const configured = process.env.SITE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (configured) return configured.replace(/\/+$/, '');
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.headers['x-forwarded-host'] || req.get('host') || `localhost:${PORT}`;
+  return `${String(proto).split(',')[0]}://${String(host).split(',')[0]}`.replace(/\/+$/, '');
+}
+
+app.get('/robots.txt', (req, res) => {
+  const origin = siteOrigin(req);
+  res.type('text/plain').set('Cache-Control', 'public, max-age=3600').send(
+    [
+      'User-agent: *',
+      'Allow: /',
+      'Disallow: /api/',
+      '',
+      'User-agent: AhrefsBot',
+      'Crawl-delay: 10',
+      '',
+      'User-agent: SemrushBot',
+      'Crawl-delay: 10',
+      '',
+      `Sitemap: ${origin}/sitemap.xml`,
+      ''
+    ].join('\n')
+  );
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const origin = siteOrigin(req);
+  const lastmod = new Date().toISOString().split('T')[0];
+  res.type('application/xml').set('Cache-Control', 'public, max-age=3600').send(
+    [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+      '  <url>',
+      `    <loc>${origin}/</loc>`,
+      `    <lastmod>${lastmod}</lastmod>`,
+      '    <changefreq>weekly</changefreq>',
+      '    <priority>1.0</priority>',
+      '  </url>',
+      '</urlset>',
+      ''
+    ].join('\n')
+  );
+});
+
+app.get('/favicon.ico', (req, res) => {
+  res.redirect(301, '/favicon.svg');
+});
+
+/**
  * Unknown API route must return JSON 404 rather than the SPA shell.
  */
 app.use('/api', (req, res) => {
@@ -227,15 +290,30 @@ app.use('/api', (req, res) => {
   });
 });
 
-app.get('*', (req, res, next) => {
-  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-  if (path.extname(req.path)) return next();
-  res.setHeader('Cache-Control', 'no-cache');
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+/**
+ * The app is a single page served at "/" that uses query params (?q=) for state,
+ * so there are no client-side routes to fall back to. Unknown paths must 404.
+ * SITE_URL placeholders are substituted so canonical/OG/schema always match the
+ * deployed origin.
+ */
+const INDEX_PATH = path.join(__dirname, 'public', 'index.html');
+
+app.get('/', (req, res, next) => {
+  fs.readFile(INDEX_PATH, 'utf8', (err, html) => {
+    if (err) return next(err);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.type('html').send(html.replace(/\{\{SITE_URL\}\}/g, siteOrigin(req)));
+  });
 });
 
+/**
+ * Anything reaching here has no route: serve the custom 404 page.
+ */
 app.use((req, res) => {
-  sendError(res, 404, 'Not found.');
+  res.status(404);
+  res.sendFile(path.join(__dirname, 'public', '404.html'), err => {
+    if (err) sendError(res, 404, 'Not found.');
+  });
 });
 
 // eslint-disable-next-line no-unused-vars

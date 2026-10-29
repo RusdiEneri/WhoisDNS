@@ -1,0 +1,17 @@
+{
+  "name": "WhoisDNS Web Tools - Deep Domain & DNS Inspector",
+  "short_name": "WhoisDNS",
+  "description": "Comprehensive Domain WHOIS lookup, deep DNS records analysis, security audit, and global DNS propagation checker.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#05070D",
+  "theme_color": "#00E5FF",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
