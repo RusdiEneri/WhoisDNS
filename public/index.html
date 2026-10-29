@@ -136,8 +136,11 @@
               <span class="badge badge-tld" id="badge-tld">.COM</span>
               <span class="badge badge-status" id="badge-status">Active</span>
               <span class="badge badge-dnssec" id="badge-dnssec">DNSSEC</span>
+              <span class="badge badge-subdomain" id="badge-subdomain" style="display: none;">Subdomain</span>
             </div>
             <div class="domain-sub-meta" id="domain-sub-meta">
+              <span id="meta-registrable" style="display: none;"></span>
+              <span class="bullet" id="meta-registrable-bullet" style="display: none;">&bull;</span>
               <span id="meta-ip">IP: -</span>
               <span class="bullet">&bull;</span>
               <span id="meta-geo">Location: -</span>
@@ -304,6 +307,9 @@
               <div class="mx-quick-list font-mono" id="overview-mx-list">
                 <!-- MX items -->
               </div>
+              <div class="email-auth-summary" id="overview-email-auth">
+                <!-- SPF / DMARC / DKIM summary -->
+              </div>
             </div>
           </div>
 
@@ -343,6 +349,12 @@
               <button class="pill-filter" data-type="SOA">SOA</button>
               <button class="pill-filter" data-type="CAA">CAA</button>
               <button class="pill-filter" data-type="SRV">SRV</button>
+              <button class="pill-filter" data-type="HTTPS">HTTPS</button>
+              <button class="pill-filter" data-type="SVCB">SVCB</button>
+              <button class="pill-filter" data-type="DS">DS</button>
+              <button class="pill-filter" data-type="DNSKEY">DNSKEY</button>
+              <button class="pill-filter" data-type="TLSA">TLSA</button>
+              <button class="pill-filter" data-type="NAPTR">NAPTR</button>
             </div>
 
             <div class="dns-search-filter">
@@ -459,6 +471,10 @@
                 <option value="TXT">Type TXT</option>
                 <option value="NS">Type NS</option>
                 <option value="CNAME">Type CNAME</option>
+                <option value="SOA">Type SOA</option>
+                <option value="CAA">Type CAA</option>
+                <option value="SRV">Type SRV</option>
+                <option value="HTTPS">Type HTTPS (SVCB)</option>
               </select>
               <button class="btn-secondary" id="btn-refresh-propagation">Refresh Propagation</button>
             </div>

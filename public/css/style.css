@@ -959,6 +959,42 @@ body {
   flex-shrink: 0;
 }
 
+/* Email Authentication Summary (SPF / DMARC / DKIM) */
+.email-auth-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.email-auth-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-card);
+  font-size: 0.725rem;
+  font-family: var(--font-mono);
+}
+
+.email-auth-chip.present {
+  border-color: rgba(50, 215, 75, 0.45);
+  color: var(--accent-green, #32D74B);
+}
+
+.email-auth-chip.missing {
+  border-color: rgba(245, 158, 11, 0.45);
+  color: var(--accent-amber, #FBBF24);
+}
+
+.badge-subdomain {
+  background-color: rgba(99, 102, 241, 0.15);
+  color: #A5B4FC;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
 /* Geo Details Table */
 .geo-details-table {
   display: grid;
@@ -1119,6 +1155,12 @@ body {
 .record-badge.type-SOA { background-color: rgba(236, 72, 153, 0.15); color: #F472B6; }
 .record-badge.type-CAA { background-color: rgba(20, 184, 166, 0.15); color: #2DD4BF; }
 .record-badge.type-SRV { background-color: rgba(249, 115, 22, 0.15); color: #FB923C; }
+.record-badge.type-HTTPS,
+.record-badge.type-SVCB { background-color: rgba(99, 102, 241, 0.15); color: #A5B4FC; }
+.record-badge.type-DS,
+.record-badge.type-DNSKEY { background-color: rgba(234, 179, 8, 0.15); color: #FDE047; }
+.record-badge.type-TLSA { background-color: rgba(217, 70, 239, 0.15); color: #E879F9; }
+.record-badge.type-NAPTR { background-color: rgba(100, 116, 139, 0.15); color: #94A3B8; }
 
 .record-ttl {
   color: var(--text-subtle);

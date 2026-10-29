@@ -53,6 +53,9 @@ const elements = {
   badgeTld: document.getElementById('badge-tld'),
   badgeStatus: document.getElementById('badge-status'),
   badgeDnssec: document.getElementById('badge-dnssec'),
+  badgeSubdomain: document.getElementById('badge-subdomain'),
+  metaRegistrable: document.getElementById('meta-registrable'),
+  metaRegistrableBullet: document.getElementById('meta-registrable-bullet'),
   metaIp: document.getElementById('meta-ip'),
   metaGeo: document.getElementById('meta-geo'),
   metaAsn: document.getElementById('meta-asn'),
@@ -81,6 +84,7 @@ const elements = {
   overviewNsList: document.getElementById('overview-ns-list'),
   btnCopyNs: document.getElementById('btn-copy-ns'),
   overviewMxList: document.getElementById('overview-mx-list'),
+  overviewEmailAuth: document.getElementById('overview-email-auth'),
   overviewGeoDetails: document.getElementById('overview-geo-details'),
 
   // Tab 2: DNS
@@ -273,12 +277,23 @@ async function checkServerHealth() {
 function sanitizeDomain(input) {
   if (!input) return '';
   let str = input.trim().toLowerCase();
-  str = str.replace(/^https?:\/\//i, '');
-  str = str.replace(/^www\./i, '');
+  str = str.replace(/^[a-z][a-z0-9+.-]*:\/\//, '');
   str = str.split('/')[0];
-  str = str.split(':')[0];
   str = str.split('?')[0];
-  return str;
+  str = str.split('#')[0];
+  str = str.split('@').pop();
+  if (str.startsWith('[')) {
+    const ipv6 = str.match(/^\[([^\]]+)\]/);
+    if (ipv6) return ipv6[1];
+  }
+  str = str.split(':')[0];
+  return str.replace(/\.+$/, '');
+}
+
+function isPlausibleDomain(str) {
+  if (!str || str.length > 253) return false;
+  if (str.includes('..')) return false;
+  return /^(?=.{1,253}$)([a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?\.)+[a-z]{2,63}$/.test(str);
 }
 
 // ==========================================================================
@@ -288,6 +303,15 @@ function sanitizeDomain(input) {
 async function executeLookup(query) {
   const domain = sanitizeDomain(query);
   if (!domain) return;
+
+  if (!isPlausibleDomain(domain) && !isIpv4(domain)) {
+    elements.loadingView.style.display = 'none';
+    elements.resultsView.style.display = 'none';
+    elements.errorView.style.display = 'block';
+    elements.errorTitle.textContent = 'Invalid Input';
+    elements.errorMessage.textContent = 'Enter a valid domain name like example.com, or an IPv4/IPv6 address.';
+    return;
+  }
 
   state.currentDomain = domain;
   saveSearchHistory(domain);
@@ -399,8 +423,24 @@ function renderResults(data) {
 
   // 1. Overview Banner
   elements.targetDomainName.textContent = domain;
-  const tldParts = domain.split('.');
-  elements.badgeTld.textContent = '.' + tldParts.slice(-1)[0].toUpperCase();
+  const tldLabel = data.tld || domain.split('.').slice(-1)[0];
+  elements.badgeTld.textContent = '.' + String(tldLabel).toUpperCase();
+
+  // Subdomain indicator
+  const registrable = data.registrableDomain;
+  const isSub = Boolean(data.isSubdomain) || Boolean(registrable && registrable !== domain);
+  elements.badgeSubdomain.style.display = isSub ? '' : 'none';
+  elements.badgeSubdomain.textContent = 'Subdomain';
+  elements.badgeSubdomain.title = isSub ? `Registrable domain: ${registrable}` : '';
+
+  if (isSub && registrable) {
+    elements.metaRegistrable.textContent = `Registrable: ${registrable}`;
+    elements.metaRegistrable.style.display = '';
+    elements.metaRegistrableBullet.style.display = '';
+  } else {
+    elements.metaRegistrable.style.display = 'none';
+    elements.metaRegistrableBullet.style.display = 'none';
+  }
 
   // Status badge
   if (whois.isAvailable) {
@@ -441,7 +481,8 @@ function renderResults(data) {
   renderHealthAudit(dns.healthChecks || []);
   renderNameservers(dns.recordsByType?.['NS']?.records || whois.nameServers || []);
   renderMailRouting(dns.recordsByType?.['MX']?.records || []);
-  renderGeoDetails(primaryIp);
+  renderEmailAuth(dns.email || { spf: dns.spf, dmarc: dns.dmarc, dkim: dns.dkim });
+  renderGeoDetails(primaryIp, data.cnameChain || []);
 
   // 4. Tab 2: DNS Records Deep Dive
   flattenDnsRecords(dns.recordsByType || {});
@@ -547,11 +588,70 @@ function renderMailRouting(mxRecords) {
   });
 }
 
+// Render Email Authentication summary (SPF / DMARC / DKIM)
+function renderEmailAuth(email) {
+  if (!elements.overviewEmailAuth) return;
+  elements.overviewEmailAuth.innerHTML = '';
+
+  const emailAuth = email || {};
+  const spf = emailAuth.spf || { present: false };
+  const dmarc = emailAuth.dmarc || { present: false };
+  const dkim = emailAuth.dkim || { present: false, records: [] };
+
+  const chips = [
+    {
+      label: 'SPF',
+      present: Boolean(spf.present),
+      detail: spf.present ? `qualifier: ${spf.qualifier || 'neutral'}` : 'not published',
+      title: spf.raw || 'No SPF (v=spf1) TXT record found'
+    },
+    {
+      label: 'DMARC',
+      present: Boolean(dmarc.present),
+      detail: dmarc.present ? `p=${dmarc.policy}` : 'not published',
+      title: dmarc.raw || 'No _dmarc TXT policy found'
+    },
+    {
+      label: 'DKIM',
+      present: Boolean(dkim.present),
+      detail: dkim.present
+        ? [...new Set((dkim.records || []).map(r => r.selector))].slice(0, 3).join(', ')
+        : 'selector not detected',
+      title: dkim.present
+        ? (dkim.records || []).map(r => `${r.selector}: ${r.value}`).join('\n')
+        : 'No DKIM key found on common selectors'
+    }
+  ];
+
+  chips.forEach(chip => {
+    const span = document.createElement('span');
+    span.className = `email-auth-chip ${chip.present ? 'present' : 'missing'}`;
+    span.title = chip.title;
+    span.textContent = `${chip.label}: ${chip.detail}`;
+    elements.overviewEmailAuth.appendChild(span);
+  });
+}
+
 // Render Geo Infrastructure Details
-function renderGeoDetails(ipInfo) {
+function renderGeoDetails(ipInfo, cnameChain) {
   elements.overviewGeoDetails.innerHTML = '';
+  const chain = Array.isArray(cnameChain) ? cnameChain : [];
+
+  if (chain.length > 0) {
+    const chainDiv = document.createElement('div');
+    chainDiv.className = 'geo-item';
+    chainDiv.style.gridColumn = '1/-1';
+    chainDiv.innerHTML = `
+      <div class="geo-label">CNAME Chain</div>
+      <div class="geo-val font-mono" title="${escapeHtml(chain.join(' -> '))}">${escapeHtml(chain.join(' \u2192 '))}</div>
+    `;
+    elements.overviewGeoDetails.appendChild(chainDiv);
+  }
+
   if (!ipInfo || !ipInfo.ip) {
-    elements.overviewGeoDetails.innerHTML = '<div class="geo-item text-muted" style="grid-column: 1/-1;">No IP information available</div>';
+    if (chain.length === 0) {
+      elements.overviewGeoDetails.innerHTML = '<div class="geo-item text-muted" style="grid-column: 1/-1;">No IP information available</div>';
+    }
     return;
   }
 
@@ -627,13 +727,14 @@ function renderDnsRecordsTable() {
   filtered.forEach(rec => {
     const tr = document.createElement('tr');
     const isIp = isIpv4(rec.value);
+    const ttlLabel = formatTtl(rec.ttl);
 
     tr.innerHTML = `
       <td>
         <span class="record-badge type-${rec.type}">${rec.type}</span>
-        <span class="record-ttl-mobile">${rec.ttl !== '-' ? rec.ttl + 's' : ''}</span>
+        <span class="record-ttl-mobile">${ttlLabel}</span>
       </td>
-      <td><span class="record-ttl">${rec.ttl !== '-' ? rec.ttl + 's' : '-'}</span></td>
+      <td><span class="record-ttl">${ttlLabel}</span></td>
       <td class="record-value-cell">
         <span>${escapeHtml(rec.value)}</span>
         ${isIp ? `<button class="btn-ip-detail" data-ip="${escapeHtml(rec.value)}">IP Info</button>` : ''}
@@ -661,6 +762,16 @@ function renderDnsRecordsTable() {
 
 function isIpv4(str) {
   return typeof str === 'string' && /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(str.trim());
+}
+
+function formatTtl(ttl) {
+  if (ttl === '-' || ttl === undefined || ttl === null || ttl === '') return '-';
+  const seconds = Number(ttl);
+  if (!Number.isFinite(seconds)) return String(ttl);
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  if (seconds < 86400) return `${(seconds / 3600).toFixed(1)}h`;
+  return `${(seconds / 86400).toFixed(1)}d`;
 }
 
 // ==========================================================================
