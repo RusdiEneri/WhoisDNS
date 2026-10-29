@@ -31,6 +31,26 @@ npm test
 
 Node 18, 20, and 22 are supported (see `.github/workflows/ci.yml`). Do not use `node --test` glob patterns: they only expand on Node 22+, which previously broke CI on 18 and 20.
 
+## Browser verification (chrome-devtools MCP)
+
+Project config enables `chrome-devtools-mcp` (see `opencode.example.json`; the real `opencode.json` holds credentials and is gitignored).
+
+Requires Node 22+ and a local Chrome install. Start the dev server first, then use the MCP tools to verify UI work instead of guessing:
+
+| Tool | Use |
+|---|---|
+| `chrome-devtools_navigate_page` | Open `http://localhost:3000/` |
+| `chrome-devtools_resize_page` | Check 390x844, 768x1024, 1440x900 |
+| `chrome-devtools_evaluate_script` | Read computed styles, assert computed colours/font sizes |
+| `chrome-devtools_take_screenshot` | Capture desktop/mobile frames |
+| `chrome-devtools_list_console_messages` | Catch runtime errors |
+| `chrome-devtools_lighthouse_audit` | Accessibility, SEO, best-practices scores |
+| `chrome-devtools_get_css_styles` | Inspect the real cascade for a selector |
+
+Use `evaluate_script` and `lighthouse_audit` for claims about the UI: a screenshot cannot be read by a text-only model, computed values can.
+
+Note: `lighthouse_audit` with `mode: "navigation"` must run after navigating to an http(s) URL; on `about:blank` it errors.
+
 ## Quality gate (Anti-Slop)
 
 Skills: `antislop` (core) plus `antislop-ui`, `antislop-human`, `antislop-layoutmobile`, `antislop-copywriting`, `antislop-code` under `.opencode/skills/`.
