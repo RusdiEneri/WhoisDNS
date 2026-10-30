@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { analyzeInput, cleanDomain, normalizeInput } = require('../lib/domain');
-const { parseWhois } = require('../lib/whois');
+const { parseWhois, isQueryAllowed } = require('../lib/whois');
 const { normalizeAnswer, unquoteTxt } = require('../lib/doh');
 const { TtlCache, cached } = require('../lib/cache');
 const { RateLimiter } = require('../lib/ratelimit');
@@ -99,6 +99,57 @@ test('parseWhois flags available domains but not subdomain NXDOMAIN text', () =>
   assert.equal(parseWhois('No match for "FOO.COM".', 'foo.com').isAvailable, true);
   assert.equal(parseWhois('Domain Name: GOOGLE.COM\nRegistrar: MarkMonitor', 'google.com').isAvailable, false);
   assert.equal(parseWhois('', 'example.com').raw, '');
+});
+
+test('parseWhois flags unregistered EU-style responses without polluting EPP status', () => {
+  const raw = [
+    'Domain: zzqxunreg12345.eu',
+    'Script: LATIN',
+    'Status: AVAILABLE'
+  ].join('\n');
+
+  const parsed = parseWhois(raw, 'zzqxunreg12345.eu');
+  assert.equal(parsed.isAvailable, true);
+  assert.deepEqual(parsed.status, []);
+});
+
+test('parseWhois reads EURid nested sections', () => {
+  const raw = [
+    'Domain: athars.eu',
+    'Script: LATIN',
+    'Registrant:',
+    '        NOT DISCLOSED!',
+    '        Visit www.eurid.eu for the web-based WHOIS.',
+    'Technical:',
+    '        Organisation: Spaceship, Inc',
+    '        Language: en',
+    '        Email: support@spaceship.com',
+    'Registrar:',
+    '        Name: Spaceship, Inc.',
+    '        Website: https://www.spaceship.com/',
+    'Name servers:',
+    '        daphne.ns.cloudflare.com',
+    '        koa.ns.cloudflare.com',
+    'Keys:',
+    '        flags:KSK protocol:3 algorithm:ECDSA_P256_SHA256 pubKey:mdsswUyr3DPW==',
+    'Please visit www.eurid.eu for more info.'
+  ].join('\n');
+
+  const parsed = parseWhois(raw, 'athars.eu');
+  assert.equal(parsed.registrar, 'Spaceship, Inc.');
+  assert.equal(parsed.registrarUrl, 'https://www.spaceship.com/');
+  assert.deepEqual(parsed.nameServers, ['daphne.ns.cloudflare.com', 'koa.ns.cloudflare.com']);
+  assert.equal(parsed.dnssec, 'signed');
+  assert.equal(parsed.isAvailable, false);
+});
+
+test('querySocket accepts a bare TLD only when explicitly allowed', () => {
+  assert.equal(isQueryAllowed('com'), false);
+  assert.equal(isQueryAllowed('com', { allowTld: true }), true);
+  assert.equal(isQueryAllowed('com ', { allowTld: true }), false);
+  assert.equal(isQueryAllowed('com\r\nevil', { allowTld: true }), false);
+  assert.equal(isQueryAllowed('-bad', { allowTld: true }), false);
+  assert.equal(isQueryAllowed('whois.iana.org'), true);
 });
 
 test('normalizeAnswer handles MX, TXT and SOA shapes', () => {

@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test test/unit.test.js test/api.test.js test/seo.test.js test/antispam.test.js test/design.test.js",
+    "test": "node --test test/unit.test.js test/api.test.js test/seo.test.js test/antispam.test.js test/design.test.js test/audit.test.js",
     "backup": "node scripts/backup.js",
     "lint": "node --check server.js && node --check lib/dns.js && node --check lib/whois.js && node --check lib/domain.js && node --check lib/doh.js && node --check lib/ip.js && node --check lib/propagation.js && node --check lib/cache.js && node --check lib/ratelimit.js && node --check lib/antispam.js && node --check public/js/app.js && node --check public/js/track.js"
   },

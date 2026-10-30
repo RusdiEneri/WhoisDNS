@@ -175,6 +175,7 @@
             </button>
           </div>
           <p class="form-error" id="domain-error" role="alert" aria-live="polite" style="display: none;"></p>
+          <p class="shortcut-hint">Press <kbd>/</kbd> to focus the search field</p>
         </form>
 
         <!-- Quick Examples & History -->
@@ -198,22 +199,42 @@
     <!-- Loading State -->
     <section id="loading-view" class="state-card loading-state" style="display: none;">
       <div class="loading-indicator" aria-hidden="true"></div>
-      <h3 class="loading-heading">Performing Comprehensive Lookup&hellip;</h3>
+      <h2 class="loading-heading">Performing Comprehensive Lookup&hellip;</h2>
       <p class="loading-sub" id="loading-subtext">Connecting to authoritative WHOIS servers &amp; resolving 15 DNS record types</p>
     </section>
 
     <!-- Error State -->
     <section id="error-view" class="state-card error-state" style="display: none;">
-      <div class="error-icon">
+      <div class="error-icon" aria-hidden="true">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="8" x2="12" y2="12"></line>
           <line x1="12" y1="16" x2="12.01" y2="16"></line>
         </svg>
       </div>
-      <h3 class="error-heading" id="error-title">Lookup Failed</h3>
+      <h2 class="error-heading" id="error-title">Lookup Failed</h2>
       <p class="error-message" id="error-message">Unable to resolve domain.</p>
-      <button class="btn-secondary" id="btn-error-retry">Try Again</button>
+
+      <div class="error-details">
+        <div class="error-detail-block">
+          <h3 class="error-detail-title">What happened</h3>
+          <p class="error-detail-body" id="error-cause">The lookup did not return a usable registry or DNS response.</p>
+        </div>
+        <div class="error-detail-block">
+          <h3 class="error-detail-title">Probable cause</h3>
+          <ul class="error-causes" id="error-causes">
+            <li>Typo in the domain or TLD.</li>
+            <li>DNS records changed recently and propagation has not finished.</li>
+            <li>The registry WHOIS server refused the port 43 connection.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="error-actions">
+        <button class="btn-secondary" id="btn-error-retry">Try Again</button>
+        <button class="btn-secondary" id="btn-error-doh">Retry via Cloudflare DoH</button>
+        <button class="btn-secondary" id="btn-error-history">Load Previous Query</button>
+      </div>
     </section>
 
     <!-- Results Container -->
@@ -269,6 +290,9 @@
           </div>
         </div>
 
+        <!-- Status notice: shown only when the domain has no registration record -->
+        <p class="domain-notice" id="domain-notice" role="status" hidden></p>
+
         <!-- KPI metrics -->
         <div class="metrics-grid">
           <div class="metric-card">
@@ -298,7 +322,7 @@
       </section>
 
       <!-- Navigation Tabs -->
-      <nav class="results-tab-bar" aria-label="Tool Views">
+      <nav class="results-tab-bar" aria-label="Tool Views" id="results-tabs">
         <button class="tab-btn active" data-tab="tab-overview">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7"></rect>
@@ -639,7 +663,7 @@
       </nav>
       <div class="about-grid">
         <div>
-          <h3 class="about-title">About WhoisDNS DevTools</h3>
+          <h2 class="about-title">About WhoisDNS DevTools</h2>
           <p class="about-p">A high-performance network engineering tool built for system administrators, security auditors, and DevOps engineers. Performs direct TCP port 43 WHOIS queries across all global TLDs (including .com, .org, .net, .id, and ccTLDs), resolves 15 DNS record types with TTL, audits email security (SPF, DMARC, DKIM, DNSSEC), and benchmarks Anycast propagation latency across 8 global resolvers.</p>
         </div>
         <div class="features-list">
@@ -649,7 +673,7 @@
           </div>
           <div class="feat-item">
             <span class="feat-dot"></span>
-            <div><strong>Dual Engine:</strong> Runs with native Node.js socket engine, with seamless client-side DoH fallback.</div>
+            <div><strong>Dual Engine:</strong> Runs with native Node.js socket engine, falling back to client-side DoH when the backend is unreachable.</div>
           </div>
           <div class="feat-item">
             <span class="feat-dot"></span>
@@ -667,16 +691,16 @@
     <div class="footer-container">
       <nav class="footer-nav" aria-label="Footer navigation">
         <div class="footer-col">
-          <h4>Tools</h4>
+          <h2 class="footer-heading">Tools</h2>
           <ul>
-            <li><a href="/?q=example.com">WHOIS Lookup</a></li>
-            <li><a href="/?q=example.com">DNS Records</a></li>
-            <li><a href="/#tab-propagation-anchor">DNS Propagation</a></li>
+            <li><a href="/?q=example.com&amp;tab=whois#results-tabs">WHOIS Lookup</a></li>
+            <li><a href="/?q=example.com&amp;tab=dns#results-tabs">DNS Records</a></li>
+            <li><a href="/?q=example.com&amp;tab=propagation#results-tabs">DNS Propagation</a></li>
             <li><a href="/?q=1.1.1.1">IP Geolocation</a></li>
           </ul>
         </div>
         <div class="footer-col">
-          <h4>Resources</h4>
+          <h2 class="footer-heading">Resources</h2>
           <ul>
             <li><a href="/#about-section">About</a></li>
             <li><a href="/api/health">API Status</a></li>
@@ -684,7 +708,7 @@
           </ul>
         </div>
         <div class="footer-col">
-          <h4>Popular Checks</h4>
+          <h2 class="footer-heading">Popular Checks</h2>
           <ul>
             <li><a href="/?q=google.com">google.com</a></li>
             <li><a href="/?q=github.com">github.com</a></li>

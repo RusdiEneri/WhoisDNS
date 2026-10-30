@@ -45,13 +45,18 @@ const elements = {
   errorView: document.getElementById('error-view'),
   errorTitle: document.getElementById('error-title'),
   errorMessage: document.getElementById('error-message'),
+  errorCause: document.getElementById('error-cause'),
+  errorCauses: document.getElementById('error-causes'),
   btnErrorRetry: document.getElementById('btn-error-retry'),
+  btnErrorDoh: document.getElementById('btn-error-doh'),
+  btnErrorHistory: document.getElementById('btn-error-history'),
   resultsView: document.getElementById('results-view'),
 
   // Overview Banner
   targetDomainName: document.getElementById('target-domain-name'),
   badgeTld: document.getElementById('badge-tld'),
   badgeStatus: document.getElementById('badge-status'),
+  domainNotice: document.getElementById('domain-notice'),
   badgeDnssec: document.getElementById('badge-dnssec'),
   badgeSubdomain: document.getElementById('badge-subdomain'),
   metaRegistrable: document.getElementById('meta-registrable'),
@@ -145,11 +150,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle URL query parameter ?q= or ?domain=
   const urlParams = new URLSearchParams(window.location.search);
   const initialQuery = urlParams.get('q') || urlParams.get('domain');
+  const initialTab = urlParams.get('tab');
   if (initialQuery) {
     elements.domainInput.value = initialQuery;
-    executeLookup(initialQuery);
+    executeLookup(initialQuery).then(() => {
+      if (initialTab) switchTab(tabIdFromSlug(initialTab));
+    });
   }
 });
+
+/** Map a short ?tab= slug onto the pane id used by switchTab. */
+function tabIdFromSlug(slug) {
+  const known = { overview: 'tab-overview', dns: 'tab-dns', whois: 'tab-whois', propagation: 'tab-propagation', raw: 'tab-raw' };
+  return known[String(slug || '').toLowerCase()] || 'tab-overview';
+}
+
+/** Reverse of tabIdFromSlug, for keeping ?tab= in the address bar. */
+function currentTabSlug() {
+  const pane = document.querySelector('.tab-pane.active');
+  if (!pane) return '';
+  return pane.id.replace(/^tab-/, '');
+}
 
 /**
  * Non-blocking analytics helper: never breaks the UI if tracking is unavailable.
@@ -258,6 +279,43 @@ function setupEventListeners() {
   elements.btnErrorRetry.addEventListener('click', () => {
     if (state.currentDomain) executeLookup(state.currentDomain);
   });
+  if (elements.btnErrorDoh) {
+    elements.btnErrorDoh.addEventListener('click', () => {
+      trackEvent('cta_click', { cta: 'error_doh_retry' });
+      if (!state.currentDomain) return;
+      runClientFallback(state.currentDomain)
+        .then(data => {
+          state.lookupData = data;
+          renderResults(data);
+          elements.errorView.style.display = 'none';
+          elements.resultsView.style.display = 'block';
+          showToast('Resolved via Cloudflare & Google DoH');
+        })
+        .catch(() => {
+          showErrorState({
+            title: 'DoH Lookup Failed',
+            message: 'Cloudflare and Google DoH could not resolve this name either.',
+            cause: 'Both public resolvers returned no usable answer for the queried name.',
+            causes: [
+              'The name does not exist in DNS.',
+              'A firewall on this network blocks outbound DoH requests.',
+              'The query is malformed.'
+            ]
+          });
+        });
+    });
+  }
+  if (elements.btnErrorHistory) {
+    elements.btnErrorHistory.addEventListener('click', () => {
+      const history = getSearchHistory();
+      if (!history.length) {
+        showToast('No previous queries stored yet');
+        return;
+      }
+      elements.domainInput.value = history[0];
+      executeLookup(history[0]);
+    });
+  }
 
   // Propagation triggers
   elements.propTypeSelect.addEventListener('change', () => {
@@ -304,6 +362,16 @@ function switchTab(tabId) {
   elements.tabPanes.forEach(pane => {
     pane.classList.toggle('active', pane.id === tabId);
   });
+
+  // Keep ?tab= in the address bar so the view survives a reload or a shared link.
+  if (state.currentDomain && window.history.replaceState) {
+    const params = new URLSearchParams(window.location.search);
+    const slug = tabId.replace(/^tab-/, '');
+    if (slug === 'overview') params.delete('tab');
+    else params.set('tab', slug);
+    const query = params.toString();
+    window.history.replaceState({ domain: state.currentDomain }, '', `${window.location.pathname}${query ? '?' + query : ''}`);
+  }
 
   // Lazy trigger propagation when tab is opened
   if (tabId === 'tab-propagation' && (!state.propagationData || state.propagationData.domain !== state.currentDomain)) {
@@ -405,25 +473,56 @@ function clearFormError() {
 // Main Lookup Execution
 // ==========================================================================
 
+/**
+ * Show the structured error card: what happened, probable cause, recovery.
+ */
+function showErrorState({ title, message, cause, causes }) {
+  elements.loadingView.style.display = 'none';
+  elements.resultsView.style.display = 'none';
+  elements.errorView.style.display = 'block';
+  if (title) elements.errorTitle.textContent = title;
+  if (message) elements.errorMessage.textContent = message;
+  if (cause && elements.errorCause) elements.errorCause.textContent = cause;
+  if (causes && elements.errorCauses) {
+    elements.errorCauses.innerHTML = '';
+    causes.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      elements.errorCauses.appendChild(li);
+    });
+  }
+  if (elements.btnErrorHistory) {
+    elements.btnErrorHistory.style.display = getSearchHistory().length ? '' : 'none';
+  }
+}
+
 async function executeLookup(query) {
   const domain = sanitizeDomain(query);
   if (!domain) return;
 
   if (!isPlausibleDomain(domain) && !isIpv4(domain)) {
-    elements.loadingView.style.display = 'none';
-    elements.resultsView.style.display = 'none';
-    elements.errorView.style.display = 'block';
-    elements.errorTitle.textContent = 'Invalid Input';
-    elements.errorMessage.textContent = 'Enter a valid domain name like example.com, or an IPv4/IPv6 address.';
+    showErrorState({
+      title: 'Invalid Input',
+      message: 'Enter a valid domain name like example.com, or an IPv4/IPv6 address.',
+      cause: 'The text typed into the search field is not a valid hostname or IP address.',
+      causes: [
+        'Missing or duplicated dot in the domain name.',
+        'A URL scheme or path was pasted instead of the bare hostname.',
+        'The TLD is not a recognised public suffix.'
+      ]
+    });
     return;
   }
 
   state.currentDomain = domain;
   saveSearchHistory(domain);
 
-  // Update browser URL query string without reloading
-  const newUrl = `${window.location.pathname}?q=${encodeURIComponent(domain)}`;
-  window.history.pushState({ domain }, '', newUrl);
+  // Update browser URL query string without reloading. The active tab is
+  // preserved so a reload lands on the same view.
+  const params = new URLSearchParams({ q: domain });
+  const slug = typeof currentTabSlug === 'function' ? currentTabSlug() : '';
+  if (slug && slug !== 'overview') params.set('tab', slug);
+  window.history.pushState({ domain }, '', `${window.location.pathname}?${params.toString()}`);
 
   // Set UI Loading State
   elements.loadingView.style.display = 'block';
@@ -466,10 +565,17 @@ async function executeLookup(query) {
       showToast('Resolved via Cloudflare & Google DoH');
       trackEvent('lookup_success', { query_type: 'domain', fallback: true });
     } catch (fallbackErr) {
-      elements.loadingView.style.display = 'none';
-      elements.errorView.style.display = 'block';
-      elements.errorTitle.textContent = 'Lookup Failed';
-      elements.errorMessage.textContent = err.message || 'Unable to connect to domain or resolver.';
+      showErrorState({
+        title: 'Lookup Failed',
+        message: err.message || 'Unable to connect to domain or resolver.',
+        cause: `Neither the backend lookup nor the browser DoH fallback returned data for ${domain}.`,
+        causes: [
+          'The domain name is misspelled or the TLD does not exist.',
+          'The registry WHOIS server refused the port 43 connection.',
+          'DNS records changed recently and propagation has not finished.',
+          'A local firewall or proxy blocks outbound DNS queries.'
+        ]
+      });
       trackEvent('lookup_failed', { reason: String(err.message || '').slice(0, 120) });
     }
   } finally {
@@ -574,17 +680,30 @@ function renderResults(data) {
     elements.metaRegistrableBullet.style.display = 'none';
   }
 
-  // Status badge
+  // Status badge. "Active" is only claimed when a registration record exists.
   if (whois.isAvailable) {
-    elements.badgeStatus.textContent = 'Available / Unregistered';
+    elements.badgeStatus.textContent = 'Not Registered';
     elements.badgeStatus.className = 'badge badge-status accent-amber';
+    elements.badgeStatus.title = `${registrable || domain} has no registration record in the registry WHOIS.`;
+  } else if (whois.error) {
+    elements.badgeStatus.textContent = 'Status Unknown';
+    elements.badgeStatus.className = 'badge badge-status accent-red';
+    elements.badgeStatus.title = whois.error;
+  } else if (!whois.registrar && !whois.creationDate && !whois.nameServers?.length) {
+    elements.badgeStatus.textContent = 'Status Unknown';
+    elements.badgeStatus.className = 'badge badge-status accent-red';
+    elements.badgeStatus.title = 'The registry returned no registration data for this domain.';
   } else if (whois.daysUntilExpiry !== null && whois.daysUntilExpiry < 0) {
     elements.badgeStatus.textContent = 'Expired';
     elements.badgeStatus.className = 'badge badge-status accent-red';
+    elements.badgeStatus.title = `Registration expired ${Math.abs(whois.daysUntilExpiry)} days ago.`;
   } else {
-    elements.badgeStatus.textContent = 'Active';
+    elements.badgeStatus.textContent = 'Registered';
     elements.badgeStatus.className = 'badge badge-status';
+    elements.badgeStatus.title = `Registered domain, looked up from the registry WHOIS for ${registrable || domain}.`;
   }
+
+  renderDomainNotice(whois, domain, registrable);
 
   // DNSSEC badge
   const isDnssec = dns.dnssec?.dnssecSupported || whois.dnssec === 'signed';
@@ -597,14 +716,16 @@ function renderResults(data) {
   elements.metaAsn.textContent = primaryIp.asn ? `ASN: ${primaryIp.asn}` : (primaryIp.isp ? `ISP: ${primaryIp.isp}` : 'ASN: -');
 
   // 2. 4 Key Metrics Bar
-  elements.kpiRegistrar.textContent = whois.registrar || 'Protected / Privacy';
-  elements.kpiIanaId.textContent = whois.registrarIanaId ? `IANA ID: ${whois.registrarIanaId}` : (whois.registrarUrl || 'Registrar URL: -');
-  elements.kpiAge.textContent = whois.domainAge || '-';
-  elements.kpiCreated.textContent = whois.creationDate ? `Created: ${formatDate(whois.creationDate)}` : 'Created: -';
-  elements.kpiExpiry.textContent = whois.expiryDate ? formatDate(whois.expiryDate) : '-';
+  elements.kpiRegistrar.textContent = whois.registrar || (whois.isAvailable ? 'Not registered' : 'Not published');
+  elements.kpiIanaId.textContent = whois.registrarIanaId ? `IANA ID: ${whois.registrarIanaId}` : (whois.registrarUrl || 'IANA ID: not published');
+  elements.kpiAge.textContent = whois.domainAge || (whois.isAvailable ? 'n/a' : 'Not published');
+  elements.kpiCreated.textContent = whois.creationDate
+    ? `Created: ${formatDate(whois.creationDate)}`
+    : (whois.isAvailable ? 'Created: n/a' : 'Created: not published');
+  elements.kpiExpiry.textContent = whois.expiryDate ? formatDate(whois.expiryDate) : (whois.isAvailable ? 'n/a' : 'Not published');
   elements.kpiDaysLeft.textContent = whois.daysUntilExpiry !== null 
     ? (whois.daysUntilExpiry > 0 ? `${whois.daysUntilExpiry.toLocaleString()} days left` : `Expired ${Math.abs(whois.daysUntilExpiry)} days ago`)
-    : 'Expires: -';
+    : (whois.isAvailable ? 'Domain is unregistered' : 'Expiry: not published');
   elements.kpiDnsCount.textContent = (dns.totalRecords || 0).toLocaleString();
   elements.kpiLatency.textContent = `Resolved in ${data.durationMs || 0}ms`;
   elements.dnsBadgeCount.textContent = (dns.totalRecords || 0).toString();
@@ -631,6 +752,31 @@ function renderResults(data) {
   elements.propPercentageText.textContent = 'Select record type and test propagation';
   elements.propProgressBar.style.width = '0%';
   elements.resolversGrid.innerHTML = '<p class="grid-empty">Click "Refresh Propagation" or open the tab to test 8 global Anycast resolvers.</p>';
+}
+
+// Explains why registration fields may be empty instead of leaving dashes.
+function renderDomainNotice(whois, domain, registrable) {
+  const notice = elements.domainNotice;
+  if (!notice) return;
+
+  const target = registrable || domain;
+  let message = '';
+
+  if (whois.isAvailable) {
+    message = `${target} is not registered. No registry WHOIS record exists for this name, so registrar, dates and status codes are unavailable. Any DNS records shown come from a different source and do not imply registration.`;
+  } else if (whois.error) {
+    message = `The registry WHOIS lookup for ${target} failed: ${whois.error}. Registration data is incomplete, so the status is unknown rather than active.`;
+  } else if (!whois.registrar && !whois.creationDate && !whois.nameServers?.length) {
+    message = `The registry returned a record for ${target} without registrar, dates or name servers. This registry withholds those fields, so treat the missing values as not published, not as inactive.`;
+  } else if (!whois.creationDate || !whois.expiryDate) {
+    const missing = [];
+    if (!whois.creationDate) missing.push('creation date');
+    if (!whois.expiryDate) missing.push('expiry date');
+    message = `This registry does not publish the ${missing.join(' or ')} for ${target}. Domain age and remaining validity stay blank because the data does not exist, not because the domain is unregistered.`;
+  }
+
+  notice.textContent = message;
+  notice.hidden = !message;
 }
 
 function formatDate(dateStr) {
@@ -860,6 +1006,8 @@ function renderDnsRecordsTable() {
     const isIp = isIpv4(rec.value);
     const ttlLabel = formatTtl(rec.ttl);
 
+    // DESIGN.md §4: mark the row so the 480px breakpoint can present it as a card.
+    tr.className = 'record-card';
     tr.innerHTML = `
       <td>
         <span class="record-badge type-${rec.type}">${rec.type}</span>
@@ -867,7 +1015,7 @@ function renderDnsRecordsTable() {
       </td>
       <td><span class="record-ttl">${ttlLabel}</span></td>
       <td class="record-value-cell">
-        <span>${escapeHtml(rec.value)}</span>
+        <span class="record-card-value">${escapeHtml(rec.value)}</span>
         ${isIp ? `<button class="btn-ip-detail" data-ip="${escapeHtml(rec.value)}">IP Info</button>` : ''}
       </td>
       <td class="cell-action">
@@ -910,39 +1058,45 @@ function formatTtl(ttl) {
 // ==========================================================================
 
 function renderWhoisDetails(whois) {
+  const unavailable = whois.isAvailable ? 'Not registered' : 'Not published';
+
   // 1. Registrar
   elements.whoisRegistrarKv.innerHTML = `
-    <div class="kv-item"><span class="kv-key">Registrar Name</span><span class="kv-val font-mono">${escapeHtml(whois.registrar || '-')}</span></div>
-    <div class="kv-item"><span class="kv-key">IANA ID</span><span class="kv-val font-mono">${escapeHtml(whois.registrarIanaId || '-')}</span></div>
-    <div class="kv-item"><span class="kv-key">Registrar URL</span><span class="kv-val font-mono">${whois.registrarUrl ? `<a href="${escapeHtml(whois.registrarUrl)}" target="_blank" rel="noopener" class="accent-cyan">${escapeHtml(whois.registrarUrl)}</a>` : '-'}</span></div>
-    <div class="kv-item"><span class="kv-key">Abuse Contact Email</span><span class="kv-val font-mono">${escapeHtml(whois.registrarAbuseEmail || '-')}</span></div>
-    <div class="kv-item"><span class="kv-key">Abuse Contact Phone</span><span class="kv-val font-mono">${escapeHtml(whois.registrarAbusePhone || '-')}</span></div>
+    <div class="kv-item"><span class="kv-key">Registrar Name</span><span class="kv-val font-mono">${escapeHtml(whois.registrar || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">IANA ID</span><span class="kv-val font-mono">${escapeHtml(whois.registrarIanaId || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">Registrar URL</span><span class="kv-val font-mono">${whois.registrarUrl ? `<a href="${escapeHtml(whois.registrarUrl)}" target="_blank" rel="noopener" class="accent-cyan">${escapeHtml(whois.registrarUrl)}</a>` : unavailable}</span></div>
+    <div class="kv-item"><span class="kv-key">Abuse Contact Email</span><span class="kv-val font-mono">${escapeHtml(whois.registrarAbuseEmail || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">Abuse Contact Phone</span><span class="kv-val font-mono">${escapeHtml(whois.registrarAbusePhone || unavailable)}</span></div>
   `;
 
   // 2. Dates
   elements.whoisDatesKv.innerHTML = `
-    <div class="kv-item"><span class="kv-key">Creation Date</span><span class="kv-val font-mono">${escapeHtml(whois.creationDate || '-')}</span></div>
-    <div class="kv-item"><span class="kv-key">Registry Expiry Date</span><span class="kv-val font-mono">${escapeHtml(whois.expiryDate || '-')}</span></div>
-    <div class="kv-item"><span class="kv-key">Updated / Modified Date</span><span class="kv-val font-mono">${escapeHtml(whois.updatedDate || '-')}</span></div>
-    <div class="kv-item"><span class="kv-key">Estimated Domain Age</span><span class="kv-val font-mono accent-cyan">${escapeHtml(whois.domainAge || '-')}</span></div>
-    <div class="kv-item"><span class="kv-key">Remaining Validity</span><span class="kv-val font-mono ${whois.daysUntilExpiry < 30 ? 'accent-red' : 'accent-green'}">${whois.daysUntilExpiry !== null ? whois.daysUntilExpiry + ' days remaining' : '-'}</span></div>
+    <div class="kv-item"><span class="kv-key">Creation Date</span><span class="kv-val font-mono">${escapeHtml(whois.creationDate || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">Registry Expiry Date</span><span class="kv-val font-mono">${escapeHtml(whois.expiryDate || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">Updated / Modified Date</span><span class="kv-val font-mono">${escapeHtml(whois.updatedDate || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">Estimated Domain Age</span><span class="kv-val font-mono accent-cyan">${escapeHtml(whois.domainAge || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">Remaining Validity</span><span class="kv-val font-mono ${whois.daysUntilExpiry !== null && whois.daysUntilExpiry < 30 ? 'accent-red' : 'accent-green'}">${whois.daysUntilExpiry !== null ? whois.daysUntilExpiry + ' days remaining' : unavailable}</span></div>
   `;
 
   // 3. Registrant
   const reg = whois.registrant || {};
+  const redacted = whois.isAvailable ? 'Not registered' : 'REDACTED FOR PRIVACY';
   elements.whoisRegistrantKv.innerHTML = `
-    <div class="kv-item"><span class="kv-key">Registrant Name</span><span class="kv-val">${escapeHtml(reg.name || 'REDACTED FOR PRIVACY')}</span></div>
-    <div class="kv-item"><span class="kv-key">Organization</span><span class="kv-val">${escapeHtml(reg.organization || 'Privacy Protected')}</span></div>
-    <div class="kv-item"><span class="kv-key">Country</span><span class="kv-val">${escapeHtml(reg.country || '-')}</span></div>
-    <div class="kv-item"><span class="kv-key">State / Province</span><span class="kv-val">${escapeHtml(reg.state || '-')}</span></div>
-    <div class="kv-item"><span class="kv-key">Contact Email</span><span class="kv-val">${escapeHtml(reg.email || 'Query Registrar for privacy relay')}</span></div>
+    <div class="kv-item"><span class="kv-key">Registrant Name</span><span class="kv-val">${escapeHtml(reg.name || redacted)}</span></div>
+    <div class="kv-item"><span class="kv-key">Organization</span><span class="kv-val">${escapeHtml(reg.organization || (whois.isAvailable ? 'Not registered' : 'Privacy Protected'))}</span></div>
+    <div class="kv-item"><span class="kv-key">Country</span><span class="kv-val">${escapeHtml(reg.country || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">State / Province</span><span class="kv-val">${escapeHtml(reg.state || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">Contact Email</span><span class="kv-val">${escapeHtml(reg.email || (whois.isAvailable ? 'Not registered' : 'Query Registrar for privacy relay'))}</span></div>
   `;
 
   // 4. Status Codes & EPP Flags
   elements.whoisStatusBadges.innerHTML = '';
   const statuses = Array.isArray(whois.status) ? whois.status : [];
   if (statuses.length === 0) {
-    elements.whoisStatusBadges.innerHTML = '<div class="status-tag-item"><div class="status-code-name">Status Unspecified</div><div class="status-code-desc">No specific EPP lock flags reported by registry.</div></div>';
+    const empty = whois.isAvailable
+      ? ['Not registered', 'No EPP status codes exist because the name is not registered.']
+      : ['Not published', 'This registry does not publish EPP status codes for this domain.'];
+    elements.whoisStatusBadges.innerHTML = `<div class="status-tag-item"><div class="status-code-name">${empty[0]}</div><div class="status-code-desc">${empty[1]}</div></div>`;
     return;
   }
 
@@ -1188,6 +1342,16 @@ function loadSearchHistory() {
       });
     }
   } catch (_) {}
+}
+
+function getSearchHistory() {
+  try {
+    const raw = localStorage.getItem('whoisdns_history');
+    const history = raw ? JSON.parse(raw) : [];
+    return Array.isArray(history) ? history : [];
+  } catch (_) {
+    return [];
+  }
 }
 
 function saveSearchHistory(domain) {

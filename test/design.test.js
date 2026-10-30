@@ -70,7 +70,10 @@ test('DESIGN.md §7: no fake macOS terminal dots', () => {
 });
 
 test('DESIGN.md §7: no decorative gradients or glassmorphism', () => {
-  assert.ok(!/linear-gradient/.test(CSS), 'linear-gradient found');
+  // DESIGN.md §4 mandates a gradient mask as the tab-bar scroll affordance,
+  // so that one declaration is allowed. Any other gradient is decoration.
+  const withoutMask = CSS.replace(/mask-image:\s*linear-gradient\([^;]*\);/g, '');
+  assert.ok(!/linear-gradient/.test(withoutMask), 'linear-gradient found');
   assert.ok(!/conic-gradient/.test(CSS), 'conic-gradient found');
   assert.ok(!/backdrop-filter/.test(CSS), 'backdrop-filter found');
 });

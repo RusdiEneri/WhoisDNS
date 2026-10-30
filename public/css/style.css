@@ -80,7 +80,7 @@
   --color-text-main: var(--primitive-slate-200);
   --color-text-bright: var(--primitive-white);
   --color-text-muted: var(--primitive-slate-400);
-  --color-text-dim: var(--primitive-slate-600);
+  --color-text-dim: var(--primitive-slate-600); /* 2.5:1 on slate-950: decorative only (bullets, separators, idle dots), never body text */
 
   /* Feedback */
   --color-status-pass: var(--primitive-emerald-500);
@@ -303,7 +303,10 @@ body {
 .nav-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 44px;
   min-height: 44px;
+  padding: 0 var(--space-2);
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-muted);
@@ -505,8 +508,8 @@ body {
 .chip-item {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 4px 10px;
+  min-height: 44px;
+  padding: 4px 12px;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-xs);
   background-color: var(--color-bg-surface);
@@ -602,6 +605,66 @@ body {
   color: var(--color-text-muted);
   margin-bottom: var(--space-6);
   word-break: break-word;
+}
+
+/* DESIGN.md §5.2: structured error card, not a bare protocol string. */
+.error-details {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  text-align: left;
+  background-color: var(--color-bg-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.error-detail-title {
+  margin-bottom: var(--space-1);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.error-detail-body,
+.error-causes {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-main);
+}
+
+.error-causes {
+  padding-left: var(--space-4);
+}
+
+.error-causes li + li {
+  margin-top: var(--space-1);
+}
+
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.shortcut-hint {
+  margin-top: var(--space-2);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.shortcut-hint kbd {
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-main);
+  background-color: var(--color-bg-surface-raised);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
 }
 
 /* ==========================================================================
@@ -820,6 +883,22 @@ body {
   color: var(--color-text-dim);
 }
 
+.domain-notice {
+  display: block;
+  margin: 0;
+  padding: var(--space-3);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-status-warn);
+  background-color: var(--color-status-warn-bg);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: var(--radius-sm);
+}
+
+.domain-notice[hidden] {
+  display: none;
+}
+
 .overview-actions {
   display: flex;
   align-items: center;
@@ -888,6 +967,8 @@ body {
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
+  /* Fades the right edge so the horizontal scroll is discoverable on phones. */
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent 100%);
 }
 
 .results-tab-bar::-webkit-scrollbar {
@@ -1312,6 +1393,19 @@ body {
   text-transform: uppercase;
   color: var(--color-text-muted);
   white-space: nowrap;
+}
+
+/* DESIGN.md §4: the type column stays visible while the table scrolls sideways. */
+.data-table th:first-child,
+.data-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--color-bg-surface);
+}
+
+.data-table th:first-child {
+  background-color: var(--color-bg-surface-raised);
 }
 
 .col-type {
@@ -1827,6 +1921,9 @@ body {
 }
 
 .breadcrumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--color-text-muted);
   text-decoration: none;
 }
@@ -1911,8 +2008,17 @@ body {
   text-align: left;
 }
 
+.footer-col h2,
 .footer-col h4 {
   margin-bottom: var(--space-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.footer-heading {
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -1930,6 +2036,9 @@ body {
 }
 
 .footer-col a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--color-text-muted);
   text-decoration: none;
   transition: color var(--transition-fast);
@@ -2193,6 +2302,58 @@ body {
 
   .toast {
     width: 100%;
+  }
+}
+
+/* DESIGN.md §4: below 480px each DNS record becomes a readable card, no sideways scroll. */
+@media (max-width: 480px) {
+  .table-responsive {
+    overflow-x: visible;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table tr {
+    margin-bottom: var(--space-2);
+    padding: var(--space-3);
+    background-color: var(--color-bg-surface-raised);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+  }
+
+  .data-table td {
+    padding: 2px 0;
+    border-bottom: none;
+  }
+
+  .data-table td:first-child {
+    position: static;
+    background-color: transparent;
+  }
+
+  .data-table .col-ttl,
+  .data-table .col-action {
+    width: auto;
+    text-align: left;
+  }
+
+  .data-table .cell-action {
+    margin-top: var(--space-2);
+  }
+
+  .record-card-value {
+    display: block;
+    word-break: break-all;
   }
 }
 
