@@ -95,6 +95,38 @@ test('parseWhois extracts structured fields', () => {
   assert.ok(parsed.daysUntilExpiry > 0);
 });
 
+test('parseWhois normalises a scheme-less Registrar URL to https', () => {
+  const raw = [
+    'Domain Name: EXAMPLE.COM',
+    'Registrar: Example Registrar, Inc.',
+    'Registrar URL: www.example-registrar.com',
+    'Registrar WHOIS Server: whois.example-registrar.com'
+  ].join('\n');
+
+  const parsed = parseWhois(raw, 'example.com');
+  assert.equal(parsed.registrarUrl, 'https://www.example-registrar.com');
+});
+
+test('parseWhois keeps an explicit http Registrar URL untouched', () => {
+  const raw = [
+    'Domain Name: EXAMPLE.COM',
+    'Registrar: Example Registrar, Inc.',
+    'Registrar URL: http://www.example-registrar.com/whois'
+  ].join('\n');
+
+  assert.equal(parseWhois(raw, 'example.com').registrarUrl, 'http://www.example-registrar.com/whois');
+});
+
+test('parseWhois drops a Registrar URL that is not a real web address', () => {
+  const raw = [
+    'Domain Name: EXAMPLE.COM',
+    'Registrar: Example Registrar, Inc.',
+    'Registrar URL: javascript:alert(1)'
+  ].join('\n');
+
+  assert.equal(parseWhois(raw, 'example.com').registrarUrl, null);
+});
+
 test('parseWhois flags available domains but not subdomain NXDOMAIN text', () => {
   assert.equal(parseWhois('No match for "FOO.COM".', 'foo.com').isAvailable, true);
   assert.equal(parseWhois('Domain Name: GOOGLE.COM\nRegistrar: MarkMonitor', 'google.com').isAvailable, false);
@@ -137,7 +169,7 @@ test('parseWhois reads EURid nested sections', () => {
 
   const parsed = parseWhois(raw, 'athars.eu');
   assert.equal(parsed.registrar, 'Spaceship, Inc.');
-  assert.equal(parsed.registrarUrl, 'https://www.spaceship.com/');
+  assert.equal(parsed.registrarUrl, 'https://www.spaceship.com');
   assert.deepEqual(parsed.nameServers, ['daphne.ns.cloudflare.com', 'koa.ns.cloudflare.com']);
   assert.equal(parsed.dnssec, 'signed');
   assert.equal(parsed.isAvailable, false);

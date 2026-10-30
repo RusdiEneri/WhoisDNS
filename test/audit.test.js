@@ -33,7 +33,7 @@ test('interactive chips and secondary links meet the 44px tap target', () => {
   assert.ok(chipBlock, '.chip-item rule missing');
   assert.match(chipBlock[1], /min-height:\s*(44px|[4-9]\dpx|1\d\dpx)/, '.chip-item lacks a 44px tap target');
 
-  for (const selector of ['.breadcrumbs a', '.footer-col a']) {
+  for (const selector of ['.breadcrumbs a', '.footer-group a']) {
     const escaped = selector.replace(/\./g, '\\.');
     const block = CSS.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
     assert.ok(block, `${selector} rule missing`);

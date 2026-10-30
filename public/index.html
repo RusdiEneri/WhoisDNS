@@ -175,7 +175,7 @@
             </button>
           </div>
           <p class="form-error" id="domain-error" role="alert" aria-live="polite" style="display: none;"></p>
-          <p class="shortcut-hint">Press <kbd>/</kbd> to focus the search field</p>
+          <p class="shortcut-hint">Tip: press <kbd>/</kbd> to jump straight to the search box</p>
         </form>
 
         <!-- Quick Examples & History -->
@@ -689,34 +689,52 @@
 
   <footer class="app-footer">
     <div class="footer-container">
-      <nav class="footer-nav" aria-label="Footer navigation">
-        <div class="footer-col">
-          <h2 class="footer-heading">Tools</h2>
-          <ul>
-            <li><a href="/?q=example.com&amp;tab=whois#results-tabs">WHOIS Lookup</a></li>
-            <li><a href="/?q=example.com&amp;tab=dns#results-tabs">DNS Records</a></li>
-            <li><a href="/?q=example.com&amp;tab=propagation#results-tabs">DNS Propagation</a></li>
-            <li><a href="/?q=1.1.1.1">IP Geolocation</a></li>
-          </ul>
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a class="footer-brand-link" href="/">
+            <svg class="footer-brand-mark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            <span class="footer-brand-name">Whois<span class="accent-cyan">DNS</span></span>
+          </a>
+          <p class="footer-tagline">Direct registry WHOIS on port 43, 15 DNS record types, and 8-resolver propagation checks. No API key, no account.</p>
         </div>
-        <div class="footer-col">
-          <h2 class="footer-heading">Resources</h2>
-          <ul>
-            <li><a href="/#about-section">About</a></li>
-            <li><a href="/api/health">API Status</a></li>
-            <li><a href="https://github.com/RusdiEneri/WhoisDNS" target="_blank" rel="noopener">Source Code</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h2 class="footer-heading">Popular Checks</h2>
-          <ul>
-            <li><a href="/?q=google.com">google.com</a></li>
-            <li><a href="/?q=github.com">github.com</a></li>
-            <li><a href="/?q=cloudflare.com">cloudflare.com</a></li>
-          </ul>
-        </div>
-      </nav>
-      <p class="footer-copy">&copy; 2026 WhoisDNS Web Tools &bull; High Contrast Dark Mode Engine &bull; Compliant with ICANN EPP &amp; RFC 1035</p>
+
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <section class="footer-group">
+            <h2 class="footer-heading">Lookup</h2>
+            <ul>
+              <li><a href="/?q=example.com&amp;tab=whois#results-tabs">WHOIS record</a></li>
+              <li><a href="/?q=example.com&amp;tab=dns#results-tabs">DNS records</a></li>
+              <li><a href="/?q=1.1.1.1">IP geolocation</a></li>
+            </ul>
+          </section>
+          <section class="footer-group">
+            <h2 class="footer-heading">Diagnostics</h2>
+            <ul>
+              <li><a href="/?q=example.com&amp;tab=propagation#results-tabs">Propagation check</a></li>
+              <li><a href="/?q=example.com&amp;tab=raw#results-tabs">Raw WHOIS output</a></li>
+              <li><a href="/api/health">API health</a></li>
+            </ul>
+          </section>
+          <section class="footer-group">
+            <h2 class="footer-heading">Project</h2>
+            <ul>
+              <li><a href="/#about-section">About this tool</a></li>
+              <li><a href="https://github.com/RusdiEneri/WhoisDNS" target="_blank" rel="noopener">Source code</a></li>
+              <li><a href="https://www.icann.org/epp" target="_blank" rel="noopener">EPP status reference</a></li>
+            </ul>
+          </section>
+        </nav>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="footer-copy">&copy; 2026 WhoisDNS Web Tools</p>
+        <p class="footer-meta">ICANN EPP &amp; RFC 1035 compliant</p>
+        <p class="footer-status" id="footer-status">Engine status: checking</p>
+      </div>
     </div>
   </footer>
 

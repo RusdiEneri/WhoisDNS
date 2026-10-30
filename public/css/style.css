@@ -113,6 +113,12 @@
 
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
+
+  /* Motion scale. Three durations, one easing, so every animation feels
+     like the same interface. No spring, no bounce: this is a telemetry tool. */
+  --motion-fast: 0.15s;
+  --motion-base: 0.24s;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 /* ==========================================================================
@@ -483,6 +489,31 @@ body {
   }
 }
 
+/* Entrance motion. Purpose: the result panes and rows replace each other
+   instantly on lookup, which reads as a flash. A short rise plus fade tells
+   the eye that new data arrived, and nothing else on the page moves. */
+@keyframes pane-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Search chips */
 
 .search-footer-chips {
@@ -655,6 +686,13 @@ body {
   margin-top: var(--space-2);
   font-size: 0.75rem;
   color: var(--color-text-muted);
+}
+
+/* Touch devices have no "/" key, so the hint would only add noise there. */
+@media (hover: none) and (pointer: coarse) {
+  .shortcut-hint {
+    display: none;
+  }
 }
 
 .shortcut-hint kbd {
@@ -1027,6 +1065,7 @@ body {
 
 .tab-pane.active {
   display: block;
+  animation: pane-enter var(--motion-base) var(--ease-out) both;
 }
 
 /* ==========================================================================
@@ -1444,6 +1483,11 @@ body {
   background-color: var(--color-record-neutral-bg);
 }
 
+/* Rows rise in sequence; the delay is set per row in app.js. */
+.record-card {
+  animation: row-enter var(--motion-base) var(--ease-out) both;
+}
+
 /* DESIGN.md §3: A/AAAA = blue, MX/TXT = orange/purple, NS/SOA = green */
 .record-badge.type-A,
 .record-badge.type-AAAA {
@@ -1645,7 +1689,7 @@ body {
   height: 100%;
   width: 0;
   background-color: var(--primitive-sky-500);
-  transition: width var(--transition-normal);
+  transition: width var(--motion-base) var(--ease-out);
 }
 
 .progress-text-row {
@@ -1997,28 +2041,70 @@ body {
 .footer-container {
   max-width: 1280px;
   margin: 0 auto;
-  text-align: center;
+}
+
+/* Brand block plus three link groups: the footer explains what the tool does
+   before listing where to go, which a bare four-column template never does. */
+.footer-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 2fr);
+  gap: var(--space-8);
+  padding-bottom: var(--space-6);
+  text-align: left;
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.footer-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  color: var(--color-text-bright);
+  text-decoration: none;
+}
+
+.footer-brand-mark {
+  color: var(--color-text-muted);
+}
+
+.footer-brand-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.footer-brand-link:hover .footer-brand-mark,
+.footer-brand-link:focus-visible .footer-brand-mark {
+  color: var(--color-focus-ring);
+}
+
+.footer-tagline {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
 }
 
 .footer-nav {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-6);
-  margin-bottom: var(--space-6);
   text-align: left;
 }
 
-.footer-col h2,
-.footer-col h4 {
-  margin-bottom: var(--space-2);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
+.footer-group {
+  min-width: 0;
 }
 
 .footer-heading {
+  margin-bottom: var(--space-1);
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -2026,33 +2112,67 @@ body {
   color: var(--color-text-muted);
 }
 
-.footer-col ul {
+.footer-group ul {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.footer-col a {
+.footer-group a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: var(--color-text-muted);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-.footer-col a:hover,
-.footer-col a:focus-visible {
   color: var(--color-text-main);
+  text-decoration: none;
+  transition: color var(--motion-fast) var(--ease-out);
 }
 
-.footer-copy {
-  margin: 0;
+.footer-group a:hover,
+.footer-group a:focus-visible {
+  color: var(--color-text-bright);
+  text-decoration: underline;
+}
+
+.footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
   padding-top: var(--space-4);
   border-top: 1px solid var(--color-border-subtle);
+  text-align: left;
+}
+
+.footer-copy,
+.footer-meta,
+.footer-status {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.footer-status::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background-color: var(--color-text-muted);
+  transition: background-color var(--motion-fast) var(--ease-out);
+}
+
+.footer-status.online::before {
+  background-color: var(--color-status-pass);
+}
+
+.footer-status.offline::before {
+  background-color: var(--color-status-warn);
 }
 
 /* ==========================================================================
@@ -2082,6 +2202,8 @@ body {
   font-size: 0.8125rem;
   color: var(--color-text-main);
   word-break: break-word;
+  /* A toast interrupts; it slides in so the eye catches it, then leaves. */
+  animation: pane-enter var(--motion-fast) var(--ease-out) both;
 }
 
 /* ==========================================================================
@@ -2151,9 +2273,9 @@ body {
     flex: 1;
   }
 
-  .footer-nav {
+  .footer-top {
     grid-template-columns: 1fr;
-    text-align: center;
+    gap: var(--space-4);
   }
 }
 
@@ -2302,6 +2424,16 @@ body {
 
   .toast {
     width: 100%;
+  }
+
+  .footer-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
   }
 }
 

@@ -386,15 +386,25 @@ function switchTab(tabId) {
 async function checkServerHealth() {
   const statusEl = document.getElementById('server-status');
   const statusText = document.getElementById('server-status-text');
+  const footerStatus = document.getElementById('footer-status');
+  const setFooter = (state, label) => {
+    if (!footerStatus) return;
+    footerStatus.className = `footer-status ${state}`;
+    footerStatus.textContent = `Engine status: ${label}`;
+  };
   try {
     const res = await fetch('/api/health');
     if (res.ok) {
       statusEl.className = 'status-indicator online';
       statusText.textContent = 'Engine Online';
+      setFooter('online', 'online');
+    } else {
+      setFooter('offline', 'degraded');
     }
   } catch (_) {
     statusEl.className = 'status-indicator offline';
     statusText.textContent = 'DoH Direct Mode';
+    setFooter('offline', 'DoH direct mode');
   }
 }
 
@@ -1001,13 +1011,15 @@ function renderDnsRecordsTable() {
     return;
   }
 
-  filtered.forEach(rec => {
+  filtered.forEach((rec, index) => {
     const tr = document.createElement('tr');
     const isIp = isIpv4(rec.value);
     const ttlLabel = formatTtl(rec.ttl);
 
     // DESIGN.md §4: mark the row so the 480px breakpoint can present it as a card.
+    // The stagger is capped so a long record list still settles quickly.
     tr.className = 'record-card';
+    tr.style.animationDelay = `${Math.min(index, 10) * 20}ms`;
     tr.innerHTML = `
       <td>
         <span class="record-badge type-${rec.type}">${rec.type}</span>
