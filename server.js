@@ -15,6 +15,7 @@ const { antiSpam } = require('./lib/antispam');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const IS_SERVERLESS = Boolean(process.env.VERCEL);
+const IS_PROD = IS_SERVERLESS || process.env.NODE_ENV === 'production';
 
 app.set('trust proxy', true);
 app.disable('x-powered-by');
@@ -30,9 +31,11 @@ app.use(helmet({
       connectSrc: ["'self'", 'https://cloudflare-dns.com', 'https://dns.google'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
-      formAction: ["'self'"]
+      formAction: ["'self'"],
+      ...(IS_PROD ? {} : { upgradeInsecureRequests: null })
     }
   },
+  hsts: IS_PROD,
   crossOriginEmbedderPolicy: false,
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
@@ -324,8 +327,9 @@ app.use((err, req, res, next) => {
 });
 
 if (require.main === module && !IS_SERVERLESS) {
-  const server = app.listen(PORT, () => {
-    console.log(`WhoisDNS Web Tools running at http://localhost:${PORT}`);
+  const HOST = process.env.HOST || '0.0.0.0';
+  const server = app.listen(PORT, HOST, () => {
+    console.log(`WhoisDNS Web Tools running at http://${HOST}:${PORT}`);
   });
 
   const shutdown = signal => {

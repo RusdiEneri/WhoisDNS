@@ -18,9 +18,17 @@ test('motion tokens are declared once and reused', () => {
 
 test('motion stays bounded: no endless animation loops', () => {
   const loops = [...CSS.matchAll(/animation:[^;]*\binfinite\b/g)].map(m => m[0]);
-  // Only the spinner may loop, and only because it marks a real in-flight request.
-  const nonSpinner = loops.filter(rule => !/spin/.test(rule));
-  assert.deepEqual(nonSpinner, [], `endless loops found: ${nonSpinner.join(' | ')}`);
+  // The spinner may loop because it marks a real in-flight request. The wordmark
+  // caret may loop only while .is-typing is set, and app.js removes that class
+  // once the name finishes, so it never outlives the typing pass. The wordmark
+  // underline loops on request: the logo has to read as alive, not frozen.
+  const allowed = loops.filter(rule => /spin/.test(rule) || /caret-blink/.test(rule) || /brand-sweep/.test(rule));
+  const unbounded = loops.filter(rule => !allowed.includes(rule));
+  assert.deepEqual(unbounded, [], `endless loops found: ${unbounded.join(' | ')}`);
+
+  const caret = CSS.match(/\.brand-name\.is-typing \.brand-caret\s*\{[^}]*\}/);
+  assert.ok(caret, 'caret loop must be scoped to .is-typing');
+  assert.match(APP, /classList\.add\('is-typed'\)/, 'typing never terminates');
 });
 
 test('the results pane animates in on tab switch', () => {

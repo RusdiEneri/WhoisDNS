@@ -136,6 +136,8 @@ const elements = {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
+  initBrandTyping();
+  initScrollReveal();
   loadSearchHistory();
   checkServerHealth();
 
@@ -158,6 +160,111 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+/**
+ * Reveal [data-reveal] blocks once, when each first reaches the viewport.
+ * The hidden state is gated behind .reveal-ready so a JS failure never leaves
+ * content invisible, and reduced-motion users skip the hidden state entirely.
+ * A scroll sweep (not IntersectionObserver) also catches anchor jumps and fast
+ * scrolling, which would otherwise leave a skipped block hidden for good.
+ */
+function initScrollReveal() {
+  const blocks = [...document.querySelectorAll('[data-reveal]')];
+  if (!blocks.length) return;
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    blocks.forEach(el => el.classList.add('is-revealed'));
+    return;
+  }
+
+  document.documentElement.classList.add('reveal-ready');
+  let pending = blocks;
+  let queued = false;
+
+  const sweep = () => {
+    queued = false;
+    const limit = window.innerHeight * 0.92;
+    pending = pending.filter(el => {
+      // Results cards live in a display:none container until a lookup runs.
+      // Leave them pending so they still animate when the pane appears.
+      if (el.offsetParent === null) return true;
+      if (el.getBoundingClientRect().top > limit) return true;
+      el.classList.add('is-revealed');
+      return false;
+    });
+    if (!pending.length) {
+      window.removeEventListener('scroll', requestSweep);
+      window.removeEventListener('resize', requestSweep);
+      if (heightObserver) heightObserver.disconnect();
+    }
+  };
+
+  const requestSweep = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(sweep);
+  };
+
+  // Lookup results change the page height after load; without this a block
+  // pushed past the fold by new content would never be re-checked.
+  const heightObserver = 'ResizeObserver' in window
+    ? new ResizeObserver(requestSweep)
+    : null;
+  if (heightObserver) heightObserver.observe(document.body);
+
+  window.addEventListener('scroll', requestSweep, { passive: true });
+  window.addEventListener('resize', requestSweep);
+  sweep();
+}
+
+/**
+ * Type the wordmark once on first load. The accessible name lives in a
+ * visually hidden copy, so this only paints the visible duplicate. Skipped for
+ * reduced-motion users, who get the finished word immediately.
+ */
+function initBrandTyping() {
+  const name = document.getElementById('brand-name');
+  const target = document.getElementById('brand-typed');
+  if (!name || !target) return;
+
+  const word = 'WhoisDNS';
+  const accentFrom = 5;
+
+  const render = count => {
+    target.textContent = '';
+    word.slice(0, count).split('').forEach((char, i) => {
+      const span = document.createElement('span');
+      span.textContent = char;
+      if (i >= accentFrom) span.className = 'accent-brand';
+      // Only the newest glyph animates in; the settled ones stay still.
+      if (i === count - 1) span.classList.add('brand-char-in');
+      target.append(span);
+    });
+  };
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    render(word.length);
+    name.classList.add('is-typed');
+    return;
+  }
+
+  name.classList.add('is-typing');
+  let index = 0;
+  // Uneven cadence: a beat on the first letter and a slower landing read as
+  // typing, where a fixed 95ms per character reads as a machine printing.
+  const delayFor = i => (i <= 1 ? 150 : i >= word.length - 1 ? 170 : 62 + (i % 3) * 26);
+  const tick = () => {
+    index += 1;
+    render(index);
+    if (index < word.length) {
+      setTimeout(tick, delayFor(index));
+    } else {
+      name.classList.remove('is-typing');
+      name.classList.add('is-typed');
+    }
+  };
+  setTimeout(tick, 120);
+}
 
 /** Map a short ?tab= slug onto the pane id used by switchTab. */
 function tabIdFromSlug(slug) {
@@ -1076,7 +1183,7 @@ function renderWhoisDetails(whois) {
   elements.whoisRegistrarKv.innerHTML = `
     <div class="kv-item"><span class="kv-key">Registrar Name</span><span class="kv-val font-mono">${escapeHtml(whois.registrar || unavailable)}</span></div>
     <div class="kv-item"><span class="kv-key">IANA ID</span><span class="kv-val font-mono">${escapeHtml(whois.registrarIanaId || unavailable)}</span></div>
-    <div class="kv-item"><span class="kv-key">Registrar URL</span><span class="kv-val font-mono">${whois.registrarUrl ? `<a href="${escapeHtml(whois.registrarUrl)}" target="_blank" rel="noopener" class="accent-cyan">${escapeHtml(whois.registrarUrl)}</a>` : unavailable}</span></div>
+    <div class="kv-item"><span class="kv-key">Registrar URL</span><span class="kv-val font-mono">${whois.registrarUrl ? `<a href="${escapeHtml(whois.registrarUrl)}" target="_blank" rel="noopener" class="accent-brand">${escapeHtml(whois.registrarUrl)}</a>` : unavailable}</span></div>
     <div class="kv-item"><span class="kv-key">Abuse Contact Email</span><span class="kv-val font-mono">${escapeHtml(whois.registrarAbuseEmail || unavailable)}</span></div>
     <div class="kv-item"><span class="kv-key">Abuse Contact Phone</span><span class="kv-val font-mono">${escapeHtml(whois.registrarAbusePhone || unavailable)}</span></div>
   `;
@@ -1086,7 +1193,7 @@ function renderWhoisDetails(whois) {
     <div class="kv-item"><span class="kv-key">Creation Date</span><span class="kv-val font-mono">${escapeHtml(whois.creationDate || unavailable)}</span></div>
     <div class="kv-item"><span class="kv-key">Registry Expiry Date</span><span class="kv-val font-mono">${escapeHtml(whois.expiryDate || unavailable)}</span></div>
     <div class="kv-item"><span class="kv-key">Updated / Modified Date</span><span class="kv-val font-mono">${escapeHtml(whois.updatedDate || unavailable)}</span></div>
-    <div class="kv-item"><span class="kv-key">Estimated Domain Age</span><span class="kv-val font-mono accent-cyan">${escapeHtml(whois.domainAge || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">Estimated Domain Age</span><span class="kv-val font-mono">\${escapeHtml(whois.domainAge || unavailable)}</span></div>
     <div class="kv-item"><span class="kv-key">Remaining Validity</span><span class="kv-val font-mono ${whois.daysUntilExpiry !== null && whois.daysUntilExpiry < 30 ? 'accent-red' : 'accent-green'}">${whois.daysUntilExpiry !== null ? whois.daysUntilExpiry + ' days remaining' : unavailable}</span></div>
   `;
 
@@ -1198,7 +1305,7 @@ function renderPropagationResults(data) {
       <div class="resolver-result-val font-mono" title="${escapeHtml(firstVal)}">${escapeHtml(firstVal)}</div>
       <div class="resolver-latency">
         <span>Latency:</span>
-        <span class="accent-cyan font-mono">${r.durationMs || 0}ms</span>
+        <span class="font-mono">\${r.durationMs || 0}ms</span>
       </div>
     `;
     elements.resolversGrid.appendChild(node);
@@ -1221,7 +1328,7 @@ async function inspectIpAddress(ip) {
 
     elements.modalIpContent.innerHTML = `
       <div class="kv-list">
-        <div class="kv-item"><span class="kv-key">IP Address</span><span class="kv-val font-mono accent-cyan">${escapeHtml(d.ip)}</span></div>
+        <div class="kv-item"><span class="kv-key">IP Address</span><span class="kv-val font-mono">\${escapeHtml(d.ip)}</span></div>
         <div class="kv-item"><span class="kv-key">Reverse DNS (PTR)</span><span class="kv-val font-mono">${escapeHtml(d.primaryHostname || d.reverseDns?.[0] || 'No PTR record')}</span></div>
         <div class="kv-item"><span class="kv-key">Location</span><span class="kv-val">${escapeHtml((d.city ? d.city + ', ' : '') + (d.region ? d.region + ', ' : '') + (d.country || 'Unknown'))}</span></div>
         <div class="kv-item"><span class="kv-key">ISP / Cloud Network</span><span class="kv-val">${escapeHtml(d.isp || 'Unknown')}</span></div>

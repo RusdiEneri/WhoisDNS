@@ -22,23 +22,52 @@ test('every CSS custom property used is declared', () => {
   assert.deepEqual(missing, [], `undeclared tokens: ${missing.join(', ')}`);
 });
 
-test('DESIGN.md primitive slate palette is present', () => {
+test('QuestUI surface, ink and accent tokens are present', () => {
   for (const token of [
-    '--primitive-slate-950',
-    '--primitive-slate-900',
-    '--primitive-slate-850',
-    '--primitive-slate-800',
-    '--primitive-slate-700',
-    '--primitive-slate-600',
-    '--primitive-slate-400',
-    '--primitive-slate-200',
-    '--primitive-white'
+    '--primitive-canvas',
+    '--primitive-surface-1',
+    '--primitive-surface-2',
+    '--primitive-surface-3',
+    '--primitive-surface-4',
+    '--primitive-ink',
+    '--primitive-ink-muted',
+    '--primitive-ink-subtle',
+    '--primitive-ink-tertiary',
+    '--primitive-hairline',
+    '--primitive-hairline-strong',
+    '--primitive-gold',
+    '--primitive-gold-light',
+    '--primitive-red',
+    '--primitive-purple'
   ]) {
     assert.ok(CSS.includes(`${token}:`), `missing primitive token ${token}`);
   }
 });
 
-test('DESIGN.md semantic tokens are present', () => {
+test('QuestUI canvas, gold and parchment use the documented hex values', () => {
+  assert.match(CSS, /--primitive-canvas:\s*#1a0f0a/i);
+  assert.match(CSS, /--primitive-surface-1:\s*#2c1a10/i);
+  assert.match(CSS, /--primitive-surface-2:\s*#3d2517/i);
+  assert.match(CSS, /--primitive-gold:\s*#ca8a04/i);
+  assert.match(CSS, /--primitive-gold-light:\s*#daa520/i);
+  assert.match(CSS, /--primitive-red:\s*#991b1b/i);
+  assert.match(CSS, /--primitive-purple:\s*#581c87/i);
+  assert.match(CSS, /--primitive-ink:\s*#f5e6d3/i);
+});
+
+test('QuestUI type stack is Cinzel, Spectral and Fira Code', () => {
+  assert.match(CSS, /--font-display:\s*'Cinzel'/);
+  assert.match(CSS, /--font-sans:\s*'Spectral'/);
+  assert.match(CSS, /--font-mono:\s*'Fira Code'/);
+  assert.match(HTML, /family=Cinzel/);
+  assert.match(HTML, /family=Spectral/);
+});
+
+test('QuestUI keeps its surface ladder free of pure black', () => {
+  assert.ok(!/#000000|#010102|#0f1011/i.test(CSS), 'flat modern surface colours still present');
+});
+
+test('QuestUI semantic tokens are present', () => {
   for (const token of [
     '--color-bg-base',
     '--color-bg-surface',
@@ -57,10 +86,17 @@ test('DESIGN.md semantic tokens are present', () => {
   }
 });
 
-test('DESIGN.md §7: no artificial glow shadows', () => {
-  assert.ok(!/box-shadow:\s*[^;]*rgba\(\s*0\s*,\s*229/.test(CSS), 'neon glow shadow found');
-  assert.ok(!/--shadow-glow/.test(CSS), '--shadow-glow token still defined');
+test('QuestUI gold glow is the sanctioned elevation, not a neon accent', () => {
+  assert.match(CSS, /--shadow-glow:\s*0 0 20px rgba\(202, 138, 4, 0\.4\)/);
+  assert.ok(!/box-shadow:\s*[^;]*rgba\(\s*0\s*,\s*229/.test(CSS), 'neon cyan glow shadow found');
   assert.ok(!/text-shadow/.test(CSS), 'text-shadow found');
+});
+
+test('QuestUI hover motion fades over 300ms', () => {
+  assert.match(CSS, /--motion-base:\s*0\.3s/);
+  const card = CSS.match(/\.card\s*\{([^}]*)\}/);
+  assert.ok(card, '.card rule missing');
+  assert.match(card[1], /transition:[^;]*box-shadow/);
 });
 
 test('DESIGN.md §7: no fake macOS terminal dots', () => {

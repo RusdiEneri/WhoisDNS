@@ -4,8 +4,8 @@
   "description": "Comprehensive Domain WHOIS lookup, deep DNS records analysis, security audit, and global DNS propagation checker.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#05070D",
-  "theme_color": "#00E5FF",
+  "background_color": "#1a0f0a",
+  "theme_color": "#1a0f0a",
   "icons": [
     {
       "src": "/favicon.svg",
