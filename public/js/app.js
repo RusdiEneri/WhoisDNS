@@ -1193,7 +1193,7 @@ function renderWhoisDetails(whois) {
     <div class="kv-item"><span class="kv-key">Creation Date</span><span class="kv-val font-mono">${escapeHtml(whois.creationDate || unavailable)}</span></div>
     <div class="kv-item"><span class="kv-key">Registry Expiry Date</span><span class="kv-val font-mono">${escapeHtml(whois.expiryDate || unavailable)}</span></div>
     <div class="kv-item"><span class="kv-key">Updated / Modified Date</span><span class="kv-val font-mono">${escapeHtml(whois.updatedDate || unavailable)}</span></div>
-    <div class="kv-item"><span class="kv-key">Estimated Domain Age</span><span class="kv-val font-mono">\${escapeHtml(whois.domainAge || unavailable)}</span></div>
+    <div class="kv-item"><span class="kv-key">Estimated Domain Age</span><span class="kv-val font-mono">${escapeHtml(whois.domainAge || unavailable)}</span></div>
     <div class="kv-item"><span class="kv-key">Remaining Validity</span><span class="kv-val font-mono ${whois.daysUntilExpiry !== null && whois.daysUntilExpiry < 30 ? 'accent-red' : 'accent-green'}">${whois.daysUntilExpiry !== null ? whois.daysUntilExpiry + ' days remaining' : unavailable}</span></div>
   `;
 
@@ -1305,7 +1305,7 @@ function renderPropagationResults(data) {
       <div class="resolver-result-val font-mono" title="${escapeHtml(firstVal)}">${escapeHtml(firstVal)}</div>
       <div class="resolver-latency">
         <span>Latency:</span>
-        <span class="font-mono">\${r.durationMs || 0}ms</span>
+        <span class="font-mono">${r.durationMs || 0}ms</span>
       </div>
     `;
     elements.resolversGrid.appendChild(node);
@@ -1328,7 +1328,7 @@ async function inspectIpAddress(ip) {
 
     elements.modalIpContent.innerHTML = `
       <div class="kv-list">
-        <div class="kv-item"><span class="kv-key">IP Address</span><span class="kv-val font-mono">\${escapeHtml(d.ip)}</span></div>
+        <div class="kv-item"><span class="kv-key">IP Address</span><span class="kv-val font-mono">${escapeHtml(d.ip)}</span></div>
         <div class="kv-item"><span class="kv-key">Reverse DNS (PTR)</span><span class="kv-val font-mono">${escapeHtml(d.primaryHostname || d.reverseDns?.[0] || 'No PTR record')}</span></div>
         <div class="kv-item"><span class="kv-key">Location</span><span class="kv-val">${escapeHtml((d.city ? d.city + ', ' : '') + (d.region ? d.region + ', ' : '') + (d.country || 'Unknown'))}</span></div>
         <div class="kv-item"><span class="kv-key">ISP / Cloud Network</span><span class="kv-val">${escapeHtml(d.isp || 'Unknown')}</span></div>

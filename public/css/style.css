@@ -1182,17 +1182,16 @@ h4 {
   font-weight: 600;
   line-height: 1.2;
   color: var(--color-text-bright);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Values such as "19.1 years (6,965 days)" are wider than a KPI cell on a
+     phone. Wrap them instead of clipping: the number is the whole point of the
+     card, so an ellipsis here hides the answer. */
+  overflow-wrap: anywhere;
 }
 
 .metric-footnote {
   font-size: 0.75rem;
   color: var(--color-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* ==========================================================================
